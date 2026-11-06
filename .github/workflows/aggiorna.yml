@@ -1,0 +1,53 @@
+name: Aggiorna dati INGV
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # ogni 10 minuti (GitHub può ritardare di qualche minuto)
+  workflow_dispatch:          # pulsante "Run workflow" per lanciarlo a mano
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  aggiorna:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Recupera i dati già pubblicati (servono se l'INGV non risponde)
+        run: |
+          mkdir -p data/img
+          BASE="${{ steps.pages.outputs.base_url }}/data"
+          for f in rm041.json sp044.json ro041.json gm037d.json img/meta.json img/vert-rm041.gif img/vert-sp044.gif \
+                   img/obl-Rocca.png img/obl-Aquila.png img/obl-Duronia.png img/obl-CTesino.png img/obl-Lampedusa.png; do
+            curl -fsS --max-time 20 "$BASE/$f" -o "data/$f" || rm -f "data/$f"
+          done
+
+      - name: Scarica dati e ionogrammi dall'INGV
+        run: node scripts/fetch-ingv.mjs
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
