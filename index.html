@@ -18,6 +18,7 @@
   .wrap{max-width:1100px;margin:0 auto;padding:16px}
   header h1{font-size:22px;margin:0 0 2px}
   header p{margin:0;color:var(--mute);font-size:13px}
+  header p.disclaimer{color:var(--ink);font-size:14px;margin:4px 0 2px}
   .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
   select,button{font:inherit;padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
   button{cursor:pointer}
@@ -25,6 +26,7 @@
   .warn{background:#fff3cd;color:#6b5000;border:1px solid #f1d27a;padding:8px 12px;border-radius:8px;margin:8px 0;font-size:14px}
   @media (prefers-color-scheme: dark){.warn{background:#3a3010;color:#f3dd95;border-color:#6b5a1d}}
   .grid{display:grid;gap:12px}
+  .grid>*{min-width:0}
   .kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
   .card h2{font-size:16px;margin:0 0 8px}
@@ -36,6 +38,7 @@
   th,td{padding:5px 6px;text-align:center;border-bottom:1px solid var(--line);font-size:13px}
   th{font-weight:600;color:var(--mute)}
   td.l,th.l{text-align:left}
+  td.l{white-space:nowrap}
   .cell{display:inline-block;min-width:64px;padding:3px 6px;border-radius:6px;font-size:12px;font-weight:600;color:#fff}
   .s-open{background:var(--open)} .s-marg{background:var(--marg);color:#222} .s-closed{background:var(--closed);color:var(--mute)}
   .s-abs{background:var(--abs)} .s-es{background:var(--es)} .s-nd{background:transparent;color:var(--mute);border:1px dashed var(--line)}
@@ -46,7 +49,12 @@
   .tip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px;display:none;box-shadow:0 4px 14px rgba(0,0,0,.15);white-space:nowrap}
   .imgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
   .imgs figure{margin:0}
-  .imgs img{width:100%;border-radius:8px;border:1px solid var(--line);background:#000;min-height:120px}
+  .imgs img{width:100%;border-radius:8px;border:1px solid var(--line);background:#000;min-height:120px;cursor:zoom-in}
+  .zoom{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.92);display:none;overflow:auto;cursor:zoom-out;-webkit-overflow-scrolling:touch}
+  .zoom.on{display:block}
+  .zoom img{display:block;margin:auto;max-width:none;width:auto;min-width:min(100%,900px);height:auto;max-height:none;border-radius:0;border:0}
+  .zoom .cap{position:fixed;left:0;right:0;bottom:0;padding:8px 52px 10px 12px;color:#fff;font-size:13px;background:rgba(0,0,0,.6)}
+  .zoom .x{position:fixed;top:10px;right:12px;width:40px;height:40px;border-radius:20px;border:0;background:rgba(255,255,255,.9);color:#000;font-size:22px;line-height:40px;cursor:pointer}
   .imgs figcaption{font-size:12px;color:var(--mute);margin-top:3px}
   .two{grid-template-columns:1fr}
   @media(min-width:900px){.two{grid-template-columns:1fr 1fr}}
@@ -59,7 +67,8 @@
 <body>
 <div class="wrap" id="iono-app">
   <header>
-    <h1>Propagazione HF – Italia</h1>
+    <h1>Progetto sperimentale di previsione della propagazione radio nelle bande radioamatoriali HF</h1>
+    <p class="disclaimer">Elaborazione dati automatica, in via sperimentale, non a cura di I.N.G.V. ma da modello elaborato con I.A. Un progetto della sez. A.R.I. Alto Lazio</p>
     <p>Dati in tempo reale delle ionosonde INGV di Roma, La Spezia e Gibilmanna · previsione a 24 ore · aggiornamento automatico</p>
   </header>
 
@@ -78,12 +87,12 @@
   <section class="grid kpis" id="kpis"></section>
 
   <section class="card" style="margin-top:12px">
-    <h2>Italia adesso – confronto tra le ionosonde</h2>
+    <h2>Confronto delle ionosonde INGV in tempo reale</h2>
     <div id="italia"><p class="note">Caricamento…</p></div>
   </section>
 
   <section class="card" style="margin-top:12px;position:relative">
-    <h2>foF2 e MUF(3000) – ultime 24 h e previsione prossime 24 h</h2>
+    <h2>foF2 e MUF(3000) – ultime 24 h e previsione prossime 24 h <span style="font-weight:400;font-size:13px;color:var(--mute)">(passare il mouse o toccare il grafico per visualizzare i dati)</span></h2>
     <div id="chart"></div>
     <div class="tip" id="tip"></div>
     <div class="legend">
@@ -96,13 +105,14 @@
 
   <section class="grid two" style="margin-top:12px">
     <div class="card">
-      <h2>Bande adesso, per distanza del collegamento</h2>
+      <h2>Situazione bande radioamatoriali HF attuali:<br><span style="font-weight:500">distanza del collegamento radio</span></h2>
+      <p class="note" style="margin-top:0">Distanza tra le due stazioni (esempi da Roma). Il calcolo vale per la ionosfera a metà strada: per collegamenti verso nord scegliete La Spezia, verso sud Gibilmanna.</p>
       <div id="bands"></div>
       <div class="legend">
         <span><i style="background:var(--open)"></i>aperta (sotto FOT)</span>
         <span><i style="background:var(--marg)"></i>marginale (FOT–MUF)</span>
         <span><i style="background:var(--closed)"></i>chiusa / zona di silenzio</span>
-        <span><i style="background:var(--abs)"></i>forte assorbimento diurno</span>
+        <span><i style="background:var(--abs)"></i>assorbita di giorno (strato D)</span>
         <span><i style="background:var(--es)"></i>aperta via E sporadico</span>
       </div>
     </div>
@@ -113,7 +123,7 @@
   </section>
 
   <section class="card" style="margin-top:12px">
-    <h2>Ionogrammi in tempo reale</h2>
+    <h2>Ionogrammi sonde INGV in tempo reale <span style="font-weight:400;font-size:13px;color:var(--mute)">(toccare o cliccare un'immagine per ingrandirla)</span></h2>
     <div class="imgs" id="imgs"></div>
     <p class="note">Ionogrammi obliqui della rete IONONET (trasmettitore di Montelibretti, RM): la traccia mostra fino a che frequenza il collegamento verso ogni ricevitore è aperto in quel momento.</p>
   </section>
@@ -126,7 +136,7 @@
     <details style="margin-top:8px">
       <summary>Come funziona il modello</summary>
       <div class="note" style="margin-top:8px;font-size:13px">
-        <p><b>Dati.</b> Ogni 15 minuti la ionosonda INGV misura foF2, M(3000)F2, MUF(3000)F2, foE, ftEs e hmF2 (scalatura automatica Autoscala). La pagina li legge dal servizio web eSWua dell'INGV e si aggiorna da sola ogni 5 minuti.</p>
+        <p><b>Dati.</b> Ogni 15 minuti la ionosonda INGV misura foF2, M(3000)F2, MUF(3000)F2, foE, ftEs e hmF2 (scalatura automatica Autoscala). Un processo automatico li scarica ogni 15 minuti dal servizio web eSWua dell'INGV e la pagina si aggiorna da sola.</p>
         <p><b>MUF per distanza.</b> Dalla MUF(3000) misurata e dall'altezza dello strato (hmF2) si calcola la MUF per 0–3000 km con la legge della secante su Terra sferica, calibrata in modo che a 3000 km coincida con il valore misurato e a 0 km con foF2. FOT = 85% della MUF. Oltre circa 3500 km si assumono più salti uguali.</p>
         <p><b>Previsione.</b> Si parte dalla mediana di foF2 degli ultimi 27 giorni per ogni quarto d'ora (fornita dall'INGV) e si applica lo scarto attuale rispetto alla mediana, che si attenua nel tempo con una costante τ. Il valore di τ e l'ampiezza della fascia di incertezza sono ricavati automaticamente confrontando, sugli ultimi giorni, ciò che il modello avrebbe previsto con ciò che è stato misurato.</p>
         <p><b>Limiti.</b> Il modello descrive la ionosfera sopra la ionosonda: è valido per collegamenti il cui punto di riflessione cade entro qualche centinaio di km (Italia e paesi vicini). Per i DX lunghi è solo indicativo. Non prevede l'inizio delle tempeste geomagnetiche: per questo c'è l'indice Kp NOAA. L'assorbimento sulle bande basse è una stima qualitativa.</p>
@@ -156,7 +166,7 @@ const CFG = {
   staticData: true,
   dataDir: 'data/',
   historyDays: 4,         // giorni di storico da scaricare (verifica + mediane M3000)
-  refreshMin: 5,           // minuti tra un aggiornamento e l'altro
+  refreshMin: 15,          // minuti tra un aggiornamento e l'altro
   fotFactor: 0.85,
 };
 const WS = 'http://ws-eswua.rm.ingv.it/swit/ais/records/';
@@ -177,11 +187,11 @@ const BANDS = [
   ['160 m',1.85],['80 m',3.65],['60 m',5.35],['40 m',7.1],['30 m',10.12],['20 m',14.15],
   ['17 m',18.1],['15 m',21.2],['12 m',24.94],['10 m',28.5],['6 m',50.2]];
 const DISTS = [
-  { d: 150,  lab: 'NVIS 0–300 km', sub: 'regionale' },
-  { d: 500,  lab: '500 km', sub: 'tutta Italia' },
-  { d: 1000, lab: '1000 km', sub: 'Europa vicina' },
-  { d: 2000, lab: '2000 km', sub: 'Europa' },
-  { d: 3000, lab: '3000 km', sub: '1 salto max' },
+  { d: 150,  lab: 'NVIS 0–300 km', sub: 'Lazio e regioni vicine' },
+  { d: 500,  lab: '500 km',  sub: 'es. Roma–Milano, Roma–Palermo' },
+  { d: 1000, lab: '1000 km', sub: 'es. Roma–Parigi, Roma–Berlino' },
+  { d: 2000, lab: '2000 km', sub: 'es. Roma–Lisbona, Roma–Stoccolma' },
+  { d: 3000, lab: '3000 km', sub: 'es. Roma–Canarie (un solo salto)' },
 ];
 const FIELDS = 'dt,fof2,muf3000f2,m3000f2,aip_foe,ftes,h_es,aip_hmf2,fof2_med_27_days';
 const Q = 15 * 60e3, H = 3600e3;
@@ -427,13 +437,13 @@ function render(st, recs, kp) {
 
   // Tabella bande
   if (last) {
-    let h = '<table><tr><th class="l">Banda</th>' + DISTS.map(d => `<th>${d.lab}<br><span style="font-weight:400">${d.sub}</span></th>`).join('') + '</tr>';
+    let h = '<table><tr><th class="l">Banda</th>' + DISTS.map(d => `<th style="white-space:nowrap">${d.lab}<br><span style="font-weight:400;font-size:11px;white-space:normal;display:inline-block;line-height:1.25">${d.sub}</span></th>`).join('') + '</tr>';
     h += `<tr><td class="l note">MUF</td>${DISTS.map(d => `<td class="note">${f1(mufAt(d.d, last))} MHz</td>`).join('')}</tr>`;
     for (const [n, f] of BANDS) {
       h += `<tr><td class="l"><b>${n}</b></td>` + DISTS.map(d => { const s = bandState(f, d.d, Object.assign({}, last, { ftes: lastEs ? lastEs.ftes : null })); return `<td><span class="cell s-${s}">${STATE_TXT[s]}</span></td>`; }).join('') + '</tr>';
     }
     h += '</table><p class="note">Riferito ai dati delle ' + hhmm(last.t) + ' (ora italiana). Per NVIS una banda è utilizzabile se sta sotto foF2: sopra c’è la zona di silenzio.</p>';
-    $('bands').innerHTML = h;
+    $('bands').innerHTML = '<div style="overflow-x:auto">' + h + '</div>';
   } else $('bands').innerHTML = '<p class="note">Nessun valore di foF2 recente.</p>';
 
   // Previsione oraria
@@ -447,7 +457,7 @@ function render(st, recs, kp) {
       h += `<tr><td class="l">${hhmm(p.t)}</td><td>${f1(p.fof2)}</td><td><b>${f1(p.muf)}</b><br><span class="note">${f1(p.lo)}–${f1(p.hi)}</span></td><td>${f1(m1)}</td><td>${bestBand(m0)}</td><td>${bestBand(m1)}</td><td>${bestBand(p.muf)}</td></tr>`;
     }
     h += '</table><p class="note">Valori in MHz. "Banda migliore" = la più alta sotto la FOT (85% della MUF); di giorno 160/80 m sono comunque penalizzate dall’assorbimento. Tra parentesi la fascia di incertezza.</p>';
-    $('fcast').innerHTML = h;
+    $('fcast').innerHTML = '<div style="overflow-x:auto">' + h + '</div>';
   }
 
   drawChart(recs, fc);
@@ -533,7 +543,7 @@ async function renderItalia(cur) {
       `<td>${f1(mufAt(1000, last))}</td><td>${f1(last.muf)}</td><td>${f1(last.ftes)}</td></tr>`;
   }
   h += '</table><p class="note">Valori in MHz. Le stazioni distanti tra loro descrivono la ionosfera di zone diverse: per un collegamento conta la ionosfera a metà strada. Roma ha due strumenti diversi (AIS-INGV con Autoscala e Digisonde con ARTIST): piccole differenze tra i due sono normali.</p>';
-  $('italia').innerHTML = h;
+  $('italia').innerHTML = '<div style="overflow-x:auto">' + h + '</div>';
 }
 
 /* ================= IONOGRAMMI ================= */
@@ -592,10 +602,28 @@ async function update(full) {
 }
 $('station').addEventListener('change', () => update(true));
 $('reload').addEventListener('click', () => { update(false); renderImages($('station').value); });
+// ingrandimento immagini: clic/tocco apre a tutto schermo, clic/tocco/Esc chiude
+(() => {
+  const z = document.createElement('div'); z.className = 'zoom';
+  z.innerHTML = '<button class="x" aria-label="Chiudi">✕</button><img alt=""><div class="cap"></div>';
+  document.body.appendChild(z);
+  const zi = z.querySelector('img'), cap = z.querySelector('.cap');
+  const close = () => { z.classList.remove('on'); document.body.style.overflow = ''; };
+  $('imgs').addEventListener('click', e => {
+    const img = e.target.closest('img'); if (!img || !img.naturalWidth) return;
+    zi.src = img.currentSrc || img.src; zi.alt = img.alt;
+    cap.textContent = img.closest('figure')?.querySelector('figcaption')?.textContent || '';
+    z.classList.add('on'); z.scrollTop = 0; document.body.style.overflow = 'hidden';
+  });
+  z.addEventListener('click', close);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+})();
 update(true);
 setInterval(() => update(false), CFG.refreshMin * 60e3);
 setInterval(() => renderImages($('station').value), 15 * 60e3);
 })();
 </script>
+<!-- Guida alla lettura e consigli (file separato) -->
+<script src="guida.js"></script>
 </body>
 </html>
