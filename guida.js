@@ -325,6 +325,7 @@ const CSS = `
 .g-guida ul{padding-left:20px;margin:6px 0}
 .g-standalone .g-guida summary{cursor:default;list-style:none}
 .g-standalone .g-guida summary::-webkit-details-marker{display:none}
+.g-end{text-align:center;color:var(--mute);font-size:12px;margin:14px 0 2px;padding-top:8px;border-top:1px solid var(--line)}
 .g-btn{display:inline-block;padding:8px 14px;border-radius:8px;background:var(--foF2);color:#fff !important;text-decoration:none;font-weight:600}
 .g-guida ul li{margin:6px 0}
 `;
@@ -374,7 +375,12 @@ function mount() {
         if (!want.includes(first)) sec.querySelectorAll(':scope > h2, :scope > p.note').forEach(e => e.remove());
       });
       // le fonti in fondo solo nel blocco che contiene l'ultimo riquadro
-      if (!want.includes(all.length)) document.querySelectorAll('footer').forEach(f => f.remove());
+      if (!want.includes(all.length)) {
+        document.querySelectorAll('footer').forEach(f => f.remove());
+        // riga finale visibile: segno a cui arrivare quando si regola l'altezza del blocco nel sito ospite
+        const secs = document.querySelectorAll('.g-guida'), last = secs[secs.length - 1];
+        if (last) { const e = document.createElement('p'); e.className = 'g-end'; e.textContent = '— Propagazione HF · Sezione A.R.I. Alto Lazio —'; last.appendChild(e); }
+      }
       document.querySelectorAll('.g-guida').forEach(sec => { sec.style.marginTop = '0'; });
     }
     document.querySelectorAll('.g-guida details').forEach(d => { d.open = true; d.querySelector('summary').addEventListener('click', e => e.preventDefault()); });
