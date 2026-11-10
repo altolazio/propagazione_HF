@@ -42,21 +42,6 @@ scripts/fetch-ingv.mjs             scarica dati e ionogrammi dall'INGV
 Da quel momento l'aggiornamento è automatico. Per modificare la pagina basta modificare
 `index.html` su GitHub (icona della matita): il sito si ripubblica da solo.
 
-## Collegarla al sito Supersite
-
-Due possibilità:
-
-- **Pagina incorporata (consigliata)**: se l'editor di Supersite ha un blocco "HTML",
-  "Codice" o "Embed", inserite:
-  ```html
-  <iframe src="https://altolazio.github.io/propagazione_HF/"
-          style="width:100%;height:2600px;border:0" loading="lazy"
-          title="Propagazione HF – Italia"></iframe>
-  ```
-  Così i soci restano sul vostro sito.
-- **Collegamento o reindirizzamento**: una voce di menu o un pulsante che punta
-  all'indirizzo GitHub. Funziona sempre, ma si esce dal vostro sito.
-
 ## Cose da sapere
 
 - **Ritardi**: GitHub esegue le azioni programmate "al meglio": a volte con 5–20 minuti di
