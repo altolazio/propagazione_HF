@@ -1,5 +1,5 @@
 // Scarica i dati delle ionosonde INGV italiane e gli ionogrammi, e li salva in ./data
-// Eseguito da GitHub Actions ogni 10 minuti (vedi .github/workflows/aggiorna.yml).
+// Eseguito da GitHub Actions ogni 15 minuti (vedi .github/workflows/aggiorna.yml).
 // Node 18+ (fetch integrato), nessuna dipendenza.
 //
 // Dati: INGV eSWua, licenza CC BY 4.0 – doi:10.13127/ESWUA/HF
