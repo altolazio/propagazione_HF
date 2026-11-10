@@ -19,7 +19,8 @@
   header h1{font-size:22px;margin:0 0 2px}
   header p{margin:0;color:var(--mute);font-size:13px}
   header p.disclaimer{color:var(--ink);font-size:14px;margin:4px 0 2px}
-  header .brand{color:#c2570c;font-weight:700}
+  header .brand{color:#c2570c;font-weight:700;text-decoration:none}
+  header a.brand:hover{text-decoration:underline}
   @media (prefers-color-scheme: dark){header .brand{color:#fb923c}}
   th.nvis,td.nvis{background:#e5f4e4;color:#14532d;font-weight:700}
   @media (prefers-color-scheme: dark){th.nvis,td.nvis{background:#163a24;color:#86efac}}
@@ -74,7 +75,7 @@
   <script>try{if(window.self!==window.top)document.getElementById('site-banner').style.display='none'}catch(e){document.getElementById('site-banner').style.display='none'}</script>
   <header>
     <h1>Progetto sperimentale di previsione della propagazione radio nelle bande radioamatoriali HF</h1>
-    <p class="disclaimer">Elaborazione dati automatica, in via sperimentale, non a cura di I.N.G.V. ma da modello elaborato con I.A. <span class="brand">Un progetto della sez. A.R.I. Alto Lazio</span></p>
+    <p class="disclaimer">Elaborazione dati automatica, in via sperimentale, non a cura di I.N.G.V. ma da modello elaborato con I.A. <a class="brand" href="https://www.arialtolazio.it" target="_blank" rel="noopener" title="Sito della Sezione A.R.I. Alto Lazio (si apre in una nuova finestra)">Un progetto della sez. A.R.I. Alto Lazio</a></p>
     <p>Dati in tempo reale delle ionosonde INGV di Roma, La Spezia e Gibilmanna · previsione a 24 ore · aggiornamento automatico</p>
   </header>
 
