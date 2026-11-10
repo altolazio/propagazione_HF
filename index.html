@@ -19,6 +19,10 @@
   header h1{font-size:22px;margin:0 0 2px}
   header p{margin:0;color:var(--mute);font-size:13px}
   header p.disclaimer{color:var(--ink);font-size:14px;margin:4px 0 2px}
+  header .brand{color:#c2570c;font-weight:700}
+  @media (prefers-color-scheme: dark){header .brand{color:#fb923c}}
+  th.nvis,td.nvis{background:#e5f4e4;color:#14532d;font-weight:700}
+  @media (prefers-color-scheme: dark){th.nvis,td.nvis{background:#163a24;color:#86efac}}
   .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
   select,button{font:inherit;padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
   button{cursor:pointer}
@@ -68,7 +72,7 @@
 <div class="wrap" id="iono-app">
   <header>
     <h1>Progetto sperimentale di previsione della propagazione radio nelle bande radioamatoriali HF</h1>
-    <p class="disclaimer">Elaborazione dati automatica, in via sperimentale, non a cura di I.N.G.V. ma da modello elaborato con I.A. Un progetto della sez. A.R.I. Alto Lazio</p>
+    <p class="disclaimer">Elaborazione dati automatica, in via sperimentale, non a cura di I.N.G.V. ma da modello elaborato con I.A. <span class="brand">Un progetto della sez. A.R.I. Alto Lazio</span></p>
     <p>Dati in tempo reale delle ionosonde INGV di Roma, La Spezia e Gibilmanna · previsione a 24 ore · aggiornamento automatico</p>
   </header>
 
@@ -449,14 +453,14 @@ function render(st, recs, kp) {
   // Previsione oraria
   {
     const bestBand = muf => { let b = null; for (const [n, f] of BANDS) if (f <= CFG.fotFactor * muf) b = n; return b || '–'; };
-    let h = '<table><tr><th class="l">Ora (IT)</th><th>foF2</th><th>MUF 3000</th><th>MUF 1000</th><th>Banda migliore NVIS</th><th>…1000 km</th><th>…3000 km</th></tr>';
+    let h = '<table><tr><th class="l">Ora (IT)</th><th>foF2</th><th>MUF 3000</th><th>MUF 1000</th><th class="nvis">Banda migliore NVIS<br><span style="font-weight:400;font-size:11px">consigliata</span></th><th>…1000 km</th><th>…3000 km</th></tr>';
     const rows = fc.pts.filter(p => (p.t / Q) % 8 === 0).slice(0, 12); // ogni 2 ore
     for (const p of rows) {
       const s = { fof2: p.fof2, muf: p.muf, m: p.m, hmf2: p.hmf2 };
       const m1 = mufAt(1000, s), m0 = mufAt(150, s);
-      h += `<tr><td class="l">${hhmm(p.t)}</td><td>${f1(p.fof2)}</td><td><b>${f1(p.muf)}</b><br><span class="note">${f1(p.lo)}–${f1(p.hi)}</span></td><td>${f1(m1)}</td><td>${bestBand(m0)}</td><td>${bestBand(m1)}</td><td>${bestBand(p.muf)}</td></tr>`;
+      h += `<tr><td class="l">${hhmm(p.t)}</td><td>${f1(p.fof2)}</td><td><b>${f1(p.muf)}</b><br><span class="note">${f1(p.lo)}–${f1(p.hi)}</span></td><td>${f1(m1)}</td><td class="nvis">${bestBand(m0)}</td><td>${bestBand(m1)}</td><td>${bestBand(p.muf)}</td></tr>`;
     }
-    h += '</table><p class="note">Valori in MHz. "Banda migliore" = la più alta sotto la FOT (85% della MUF); di giorno 160/80 m sono comunque penalizzate dall’assorbimento. Tra parentesi la fascia di incertezza.</p>';
+    h += '</table><p class="note">Valori in MHz. In verde la colonna NVIS: per collegamenti entro 300 km è la scelta più affidabile, perché il segnale sale e scende quasi in verticale sulla ionosfera appena sopra di noi. "Banda migliore" = la più alta sotto la FOT (85% della MUF); di giorno 160/80 m sono comunque penalizzate dall’assorbimento. Sotto la MUF 3000, in piccolo, la fascia di incertezza.</p>';
     $('fcast').innerHTML = '<div style="overflow-x:auto">' + h + '</div>';
   }
 
