@@ -323,6 +323,8 @@ const CSS = `
 .g-svg .s-skip{fill:var(--muf);opacity:.18}
 .g-svg .s-tx{fill:var(--ink)}
 .g-guida ul{padding-left:20px;margin:6px 0}
+.g-standalone .g-guida summary{cursor:default;list-style:none}
+.g-standalone .g-guida summary::-webkit-details-marker{display:none}
 .g-btn{display:inline-block;padding:8px 14px;border-radius:8px;background:var(--foF2);color:#fff !important;text-decoration:none;font-weight:600}
 .g-guida ul li{margin:6px 0}
 `;
@@ -340,7 +342,10 @@ const HTML_LINK = `
 
 function mount() {
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
-  if (EMBEDDED) {
+  const params = new URLSearchParams(location.search);
+  // pagina dei dati incorporata con "?senzaguida": la guida è in un riquadro separato (guida.html)
+  if (!window.GUIDA_STANDALONE && params.has('senzaguida')) return;
+  if (EMBEDDED && !window.GUIDA_STANDALONE) {
     const w = document.createElement('div'); w.innerHTML = HTML_LINK.trim();
     const app0 = document.getElementById('iono-app') || document.body, f0 = app0.querySelector('footer');
     f0 ? app0.insertBefore(w.firstElementChild, f0) : app0.appendChild(w.firstElementChild);
@@ -354,6 +359,12 @@ function mount() {
   const w2 = document.createElement('div'); w2.innerHTML = HTML_IONO.trim();
   const sec2 = w2.firstElementChild;
   foot ? app.insertBefore(sec2, foot) : app.appendChild(sec2);
+  // pagina guida.html: tutti i riquadri aperti e titoli non cliccabili, così l'altezza resta fissa
+  if (window.GUIDA_STANDALONE) {
+    document.querySelectorAll('.g-guida details').forEach(d => { d.open = true; d.querySelector('summary').addEventListener('click', e => e.preventDefault()); });
+    document.querySelectorAll('.g-guida .g-hint').forEach(e => e.remove());
+    document.documentElement.classList.add('g-standalone');
+  }
 }
 document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', mount) : mount();
 })();
