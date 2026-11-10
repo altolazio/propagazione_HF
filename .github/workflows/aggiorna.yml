@@ -2,7 +2,7 @@ name: Aggiorna dati INGV
 
 on:
   schedule:
-    - cron: '*/10 * * * *'   # ogni 10 minuti (GitHub può ritardare di qualche minuto)
+           - cron: '5-59/15 * * * *'   # ogni 15 minuti, a :05 :20 :35 :50, subito dopo le misure INGV
   workflow_dispatch:          # pulsante "Run workflow" per lanciarlo a mano
   push:
     branches: [main]
