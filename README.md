@@ -16,31 +16,6 @@ scripts/fetch-ingv.mjs             scarica dati e ionogrammi dall'INGV
 .github/workflows/mantieni-attivo.yml  commit mensile per non far sospendere le azioni
 ```
 
-## Messa online (circa 10 minuti, tutto dal browser)
-
-1. **Account**: registratevi su https://github.com (gratuito). Conviene un account della
-   sezione/associazione, non personale.
-2. **Repository**: in alto a destra *+ → New repository*. Nome ad esempio `propagazione`,
-   visibilità **Public** (con il piano gratuito Pages funziona solo con repository pubblici),
-   poi *Create repository*.
-3. **Caricare i file**: *Add file → Upload files* e trascinate **il contenuto** della cartella
-   estratta dallo zip (anche la cartella `.github`; su Mac/Windows le cartelle che iniziano
-   con il punto possono essere nascoste: attivate la visualizzazione dei file nascosti).
-   Poi *Commit changes*.
-   Controllo: nel repository devono comparire `index.html`, `scripts/` e `.github/workflows/`.
-   Se `.github` non è stata caricata: *Add file → Create new file*, come nome scrivete
-   `.github/workflows/aggiorna.yml` e incollate il contenuto del file; fate lo stesso per
-   `mantieni-attivo.yml`.
-4. **Attivare Pages**: *Settings → Pages → Build and deployment → Source:* **GitHub Actions**.
-5. **Primo avvio**: scheda *Actions* → se richiesto, *I understand… enable them* →
-   a sinistra *Aggiorna dati INGV* → *Run workflow*. Dopo 1–2 minuti diventa verde.
-   Aprendo l'esecuzione e il passo "Scarica dati e ionogrammi dall'INGV" si vede quanti
-   valori sono stati scaricati per ogni stazione.
-6. **Indirizzo della pagina**: `https://NOME-UTENTE.github.io/propagazione/`
-   (si trova anche in *Settings → Pages*).
-
-Da quel momento l'aggiornamento è automatico. Per modificare la pagina basta modificare
-`index.html` su GitHub (icona della matita): il sito si ripubblica da solo.
 
 ## Cose da sapere
 
