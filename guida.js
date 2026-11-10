@@ -361,6 +361,22 @@ function mount() {
   foot ? app.insertBefore(sec2, foot) : app.appendChild(sec2);
   // pagina guida.html: tutti i riquadri aperti e titoli non cliccabili, così l'altezza resta fissa
   if (window.GUIDA_STANDALONE) {
+    // ?parti=1,2,3 → mostra solo quei riquadri (numerati da 1 nell'ordine della pagina),
+    // per dividere la guida in più blocchi quando il sito ospite limita l'altezza
+    const all = [...document.querySelectorAll('.g-guida details')];
+    const want = (params.get('parti') || '').split(',').map(x => parseInt(x, 10)).filter(n => n > 0);
+    if (want.length) {
+      all.forEach((d, i) => { if (!want.includes(i + 1)) d.remove(); });
+      document.querySelectorAll('.g-guida').forEach(sec => {
+        if (!sec.querySelector('details')) { sec.remove(); return; }
+        // titolo e introduzione della sezione solo se contiene il suo primo riquadro
+        const first = sec.id === 'guida' ? 1 : all.findIndex(d => d.closest('#ionosfera')) + 1;
+        if (!want.includes(first)) sec.querySelectorAll(':scope > h2, :scope > p.note').forEach(e => e.remove());
+      });
+      // le fonti in fondo solo nel blocco che contiene l'ultimo riquadro
+      if (!want.includes(all.length)) document.querySelectorAll('footer').forEach(f => f.remove());
+      document.querySelectorAll('.g-guida').forEach(sec => { sec.style.marginTop = '0'; });
+    }
     document.querySelectorAll('.g-guida details').forEach(d => { d.open = true; d.querySelector('summary').addEventListener('click', e => e.preventDefault()); });
     document.querySelectorAll('.g-guida .g-hint').forEach(e => e.remove());
     document.documentElement.classList.add('g-standalone');
