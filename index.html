@@ -537,6 +537,9 @@ async function renderItalia(cur) {
     try { const recs = k === cur && store[k] ? [...store[k].values()].sort((a, b) => a.t - b.t) : await loadStation(k); return [k, recs]; }
     catch (e) { return [k, []]; }
   }));
+  // ultimi valori di ogni ionosonda, condivisi con il calcolatore QSO (collegamento.js)
+  window.IONO_ULTIMI = Object.fromEntries(rows.map(([k, recs]) => [k, [...recs].reverse().find(r => r.fof2) || null]));
+  window.IONO_ULTIMI_T = Date.now();
   let h = '<table><tr><th class="l">Ionosonda</th><th>Zona</th><th>Ora (IT)</th><th>foF2</th><th>vs mediana</th><th>MUF 1000 km</th><th>MUF 3000 km</th><th>ftEs / foEs</th></tr>';
   for (const [k, recs] of rows) {
     const S = STATIONS[k], last = [...recs].reverse().find(r => r.fof2);
@@ -631,5 +634,7 @@ setInterval(() => renderImages($('station').value), 15 * 60e3);
 </script>
 <!-- Guida alla lettura e consigli (file separato) -->
 <script src="guida.js"></script>
+<!-- Calcolatore per QSO in tempo reale (file separato) -->
+<script src="collegamento.js"></script>
 </body>
 </html>
