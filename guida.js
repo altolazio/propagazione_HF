@@ -346,12 +346,8 @@ function mount() {
   const params = new URLSearchParams(location.search);
   // pagina dei dati incorporata con "?senzaguida": la guida è in un riquadro separato (guida.html)
   if (!window.GUIDA_STANDALONE && params.has('senzaguida')) return;
-  if (EMBEDDED && !window.GUIDA_STANDALONE) {
-    const w = document.createElement('div'); w.innerHTML = HTML_LINK.trim();
-    const app0 = document.getElementById('iono-app') || document.body, f0 = app0.querySelector('footer');
-    f0 ? app0.insertBefore(w.firstElementChild, f0) : app0.appendChild(w.firstElementChild);
-    return;
-  }
+  // pagina dei dati incorporata in un altro sito: nessuna guida e nessun riquadro (la guida ha i suoi blocchi)
+  if (EMBEDDED && !window.GUIDA_STANDALONE) return;
   const wrap = document.createElement('div'); wrap.innerHTML = HTML.trim();
   const sec = wrap.firstElementChild;
   const app = document.getElementById('iono-app') || document.body;
