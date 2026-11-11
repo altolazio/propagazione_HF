@@ -2,14 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<!-- Google Tag Manager / Analytics (GTM-M6ZHVX8N) -->
-<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-M6ZHVX8N"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
-</script>
+<!-- Google Tag Manager / Analytics (GTM-M6ZHVX8N): caricato SOLO dopo il consenso, vedi "Consenso cookie" in fondo alla pagina -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Propagazione HF – Italia (ionosonde INGV)</title>
 <style>
@@ -164,6 +157,7 @@
     Ionogrammi obliqui: Zirizzotti A., Zuccheretti E., Sciacca U., Bianchi C., Baskaradas J. (2023), <a href="http://iononet.ingv.it" target="_blank" rel="noopener">IONONET</a> Network of oblique sounding, INGV, <a href="https://doi.org/10.13127/iononet" target="_blank" rel="noopener">doi:10.13127/iononet</a> – © INGV, riprodotti con citazione della fonte come previsto dai crediti del sito.
     Indice Kp: NOAA Space Weather Prediction Center.
     I dati sono elaborati da questa pagina (calcolo MUF per distanza, stato delle bande, previsione): i valori derivati non sono prodotti dall'INGV, che non ne è responsabile. I valori sono scalati automaticamente e possono contenere errori.
+    <br><a href="#" id="cc-pref">Preferenze cookie</a> – statistiche di visita (Google Analytics) solo con il vostro consenso.
   </footer>
 </div>
 
@@ -645,5 +639,53 @@ setInterval(() => renderImages($('station').value), 15 * 60e3);
 <script src="guida.js"></script>
 <!-- Calcolatore per QSO in tempo reale (file separato) -->
 <script src="collegamento.js"></script>
+<!-- ================= Consenso cookie (statistiche Google Analytics via GTM) ================= -->
+<style>
+.cc-bar{z-index:1000;background:var(--card,#fff);color:var(--ink,#1b1f24);border:1px solid var(--line,#dde2e8);border-radius:12px;box-shadow:0 10px 30px rgba(0,20,60,.25);padding:12px 14px;font-size:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.cc-bar.fix{position:fixed;left:12px;right:12px;bottom:12px;max-width:760px;margin:0 auto}
+.cc-bar.top{margin:0 0 12px}
+.cc-bar p{margin:0;flex:1;min-width:240px}
+.cc-bar button{font:inherit;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;border:1px solid var(--line,#dde2e8);background:var(--bg,#f6f7f9);color:var(--ink,#1b1f24)}
+.cc-bar button.ok{background:var(--foF2,#2f6fdc);border-color:var(--foF2,#2f6fdc);color:#fff}
+</style>
+<script>
+(() => {
+  const GTM = 'GTM-M6ZHVX8N', KEY = 'propHF-consenso-statistiche';
+  const leggi = () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } };
+  const scrivi = v => { try { localStorage.setItem(KEY, v); } catch (e) {} };
+  let caricato = false;
+  function caricaGTM() {
+    if (caricato) return; caricato = true;
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { dataLayer.push(arguments); };
+    gtag('js', new Date());
+    dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+    const s = document.createElement('script'); s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtm.js?id=' + GTM;
+    document.head.appendChild(s);
+  }
+  let embedded = true; try { embedded = window.self !== window.top; } catch (e) {}
+  function mostra() {
+    if (document.querySelector('.cc-bar')) return;
+    const b = document.createElement('div');
+    b.className = 'cc-bar ' + (embedded ? 'top' : 'fix');
+    b.setAttribute('role', 'region'); b.setAttribute('aria-label', 'Consenso cookie');
+    b.innerHTML = '<p>Questa pagina usa cookie di <b>Google Analytics</b> solo per contare le visite in forma statistica. Nessun dato viene usato per pubblicità. Potete accettare o rifiutare: la pagina funziona in ogni caso.</p>' +
+      '<button type="button" class="no">Rifiuto</button><button type="button" class="ok">Accetto</button>';
+    const app = document.getElementById('iono-app');
+    if (embedded && app) app.insertBefore(b, app.firstChild); else document.body.appendChild(b);
+    b.querySelector('.ok').onclick = () => { scrivi('si'); b.remove(); caricaGTM(); };
+    b.querySelector('.no').onclick = () => { scrivi('no'); b.remove(); };
+  }
+  const v = leggi();
+  if (v === 'si') caricaGTM(); else if (v !== 'no') mostra();
+  const pref = document.getElementById('cc-pref');
+  if (pref) pref.addEventListener('click', e => {
+    e.preventDefault();
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    mostra(); (document.querySelector('.cc-bar') || {}).scrollIntoView?.({ block: 'nearest' });
+  });
+})();
+</script>
 </body>
 </html>
