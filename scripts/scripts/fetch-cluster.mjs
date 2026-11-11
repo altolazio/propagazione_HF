@@ -102,5 +102,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   lista.sort((a, b) => b.t - a.t);
   await mkdir(OUT, { recursive: true });
   await writeFile(`${OUT}/cluster.json`, JSON.stringify({ agg: ora, nodo: ris.nodo, nome: ris.nome, finestraMin: FINESTRA_MIN, spot: lista }));
+  
   console.log(`cluster.json: ${lista.length} spot SSB italiani negli ultimi ${FINESTRA_MIN} min (nodo ${ris.nodo}).`);
 }
