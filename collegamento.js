@@ -3,7 +3,8 @@
    Sezione A.R.I. Alto Lazio
    File separato: aggiunge nella barra in alto il pulsante "Banda tra due province"
    e una finestra che, dai DATI REALI PIÙ RECENTI delle ionosonde INGV (nessuna previsione),
-   suggerisce la banda HF più adatta per un collegamento tra due capoluoghi di provincia.
+   suggerisce la banda HF più adatta per un collegamento in SSB tra due capoluoghi di provincia,
+   e mostra gli spot in fonia dell'ultima ora letti dal DX cluster (file data/cluster.json).
    Per toglierlo basta eliminare la riga <script src="collegamento.js"> da index.html.
    ===================================================================== */
 (() => {
@@ -159,12 +160,65 @@ function suggerisci(pa, pb, dati) {
   const muf = mufAt(D, s), es = mufEs(D, s.ftes);
   const righe = BANDE.map(([n, f]) => ({ n, f, st: stato(f, D, s, muf, es) }));
   const hf = righe.filter(r => r.f < 30);
-  const aperte = hf.filter(r => r.st === 'open');
+  const noSSB = r => r.n === '30 m';   // 30 m: banda WARC solo CW e digitali, niente fonia → mai consigliata per SSB
+  const aperte = hf.filter(r => r.st === 'open' && !noSSB(r));
   const best = aperte[aperte.length - 1] || null;
   const alt = best ? aperte[aperte.length - 2] || null : null;
-  const marg = hf.filter(r => r.st === 'marg');
+  const marg = hf.filter(r => r.st === 'marg' && !noSSB(r));
   const esBands = righe.filter(r => r.st === 'es');
   return { D0, D, mid, s, muf, fot: FOT * muf, es, righe, best, alt, marg, esBands, day: s.foe != null && s.foe >= 1.8 };
+}
+
+/* ---------- call area italiana di ogni provincia (per gli spot del DX cluster) ---------- */
+const AREE = {
+  '0': ['Lazio, Umbria', 'RM LT FR VT RI PG TR'],
+  'S': ['Sardegna', 'CA SS NU OR SU CI VS OG OT'],
+  '1': ['Piemonte, Valle d’Aosta, Liguria', 'TO VC NO CN AT AL BI VB AO GE IM SP SV'],
+  '2': ['Lombardia', 'MI BG BS CO CR LC LO MN PV SO VA MB'],
+  '3': ['Veneto, Trentino-A.A., Friuli-V.G.', 'VE VR VI PD TV BL RO TN BZ TS UD PN GO'],
+  '4': ['Emilia-Romagna', 'BO FE FC MO PR PC RA RE RN'],
+  '5': ['Toscana', 'FI AR GR LI LU MS PI PT PO SI'],
+  '6': ['Marche, Abruzzo', 'AN AP FM MC PU AQ CH PE TE'],
+  '7': ['Puglia, Basilicata', 'BA BT BR FG LE TA MT PZ'],
+  '8': ['Campania, Calabria, Molise', 'NA AV BN CE SA CZ CS KR RC VV CB IS'],
+  '9': ['Sicilia', 'PA AG CL CT EN ME RG SR TP'],
+};
+const AREA_DI = {}; for (const [a, [, l]] of Object.entries(AREE)) for (const s of l.split(' ')) AREA_DI[s] = a;
+const nomeArea = a => a === 'S' ? 'IS0/IM0 (Sardegna)' : `call area ${a} (${AREE[a][0]})`;
+
+/* ---------- attività SSB dal DX cluster (file data/cluster.json, preparato ogni 15 min dal workflow) ---------- */
+const UN_ORA = 60 * 60e3;
+let clusterCache = null, clusterT = 0;
+async function leggiCluster() {
+  if (clusterCache && Date.now() - clusterT < 5 * 60e3) return clusterCache;
+  try {
+    const r = await fetch('data/cluster.json?v=' + Math.floor(Date.now() / 300e3), { cache: 'no-store' });
+    if (!r.ok) return null;
+    clusterCache = await r.json(); clusterT = Date.now(); return clusterCache;
+  } catch { return null; }
+}
+function boxCluster(c, banda, A, B) {
+  const fonte = c && c.nodo ? `${esc(c.nodo)}${c.nome ? ' (' + esc(c.nome) + ')' : ''}` : 'IQ1LA-6 (ARI Loano)';
+  const nota = `<p class="cg-small" style="margin:6px 0 0">Spot in <b>fonia (SSB)</b> dell’ultima ora dal DX cluster ${fonte}: esclusi CW e modi digitali (FT8, FT4, RTTY…). La call area è dedotta dal nominativo; uno spot non è un QSO, il dato è solo indicativo.</p>`;
+  const tit = '<b>Attività SSB dal DX cluster – ultima ora</b>';
+  if (!c || !Array.isArray(c.spot)) return `<div class="cg-cl">${tit}<p class="cg-small" style="margin:4px 0">Dati del cluster non disponibili in questo momento.</p>${nota}</div>`;
+  const ora = Date.now(), sp = c.spot.filter(s => s.t >= ora - UN_ORA && s.t <= ora + 5 * 60e3);
+  const righe = [];
+  if (banda) {
+    const tra = sp.filter(s => s.b === banda && ((s.ade === A && s.adx === B) || (s.ade === B && s.adx === A)));
+    const zone = A === B ? `dentro la ${nomeArea(A)}` : `tra ${nomeArea(A)} e ${nomeArea(B)}`;
+    const es = tra.slice(0, 3).map(s => `${esc(s.de)} ha spottato ${esc(s.dx)} su ${f1(s.f)} kHz alle ${hhmm(s.t)}`).join('; ');
+    righe.push(`<li>Spot SSB ${zone} su <b>${banda}</b>: <b>${tra.length}</b>${es ? ' – ' + es : ''}.</li>`);
+    const suB = sp.filter(s => s.b === banda);
+    const cnt = {}; for (const s of suB) for (const a of new Set([s.ade, s.adx].filter(Boolean))) cnt[a] = (cnt[a] || 0) + 1;
+    const det = Object.entries(cnt).sort((x, y) => y[1] - x[1]).map(([a, n]) => `${a === 'S' ? 'IS0' : a} ×${n}`).join(', ');
+    righe.push(`<li>Spot SSB con stazioni italiane su <b>${banda}</b>: <b>${suB.length}</b>${det ? ` (per call area: ${det})` : ''}.</li>`);
+  }
+  const perB = {}; for (const s of sp) if (s.b !== banda) perB[s.b] = (perB[s.b] || 0) + 1;
+  const altre = BANDE.map(b => b[0]).filter(n => perB[n]).map(n => `${n} (${perB[n]})`).join(', ');
+  righe.push(`<li>${banda ? 'Altre bande' : 'Bande'} con spot SSB italiani: ${altre || 'nessuna'}.</li>`);
+  const vecchio = ora - c.agg > 45 * 60e3 ? `<p class="cg-small cg-err" style="margin:4px 0">Ultimo aggiornamento del cluster alle ${hhmm(c.agg)}: dati non recenti.</p>` : '';
+  return `<div class="cg-cl">${tit}<ul>${righe.join('')}</ul>${vecchio}${nota}</div>`;
 }
 
 /* ---------- interfaccia ---------- */
@@ -192,6 +246,9 @@ const CSS = `
 .cg-close:hover{border-color:var(--mute,#5f6b78)}
 .cg-err{color:var(--muf,#d23d5b);font-weight:600}
 .cg-small{font-size:12px;color:var(--mute,#5f6b78)}
+.cg-cl{background:var(--bg,#f6f7f9);border:1px dashed var(--line,#dde2e8);border-radius:12px;padding:8px 12px;margin:8px 0;font-size:13px}
+.cg-cl ul{margin:4px 0;padding-left:18px}.cg-cl li{margin:2px 0}
+.cg-ssb{display:inline-block;font-size:12px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--foF2,#2f6fdc);color:#fff;margin-left:6px;vertical-align:middle}
 `;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 const f1 = v => v == null ? '–' : v.toFixed(1).replace('.', ',');
@@ -219,8 +276,8 @@ function mount() {
   const pop = document.createElement('div'); pop.className = 'cg-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-modal', 'true'); pop.setAttribute('aria-labelledby', 'cg-tit');
   pop.innerHTML = `
     <button type="button" class="cg-x" aria-label="Chiudi">✕</button>
-    <h2 id="cg-tit">Calcolatore per QSO in tempo reale</h2>
-    <p class="cg-small" style="margin:0">Banda consigliata per un collegamento tra due province, in base agli <b>ultimi dati reali</b> delle ionosonde INGV (nessuna previsione). Scegliere le due province dai menu (con il menu aperto si può digitare la sigla per trovarla subito).</p>
+    <h2 id="cg-tit">Calcolatore per QSO in tempo reale <span class="cg-ssb">SSB</span></h2>
+    <p class="cg-small" style="margin:0">Banda consigliata per un collegamento tra due province, in base agli <b>ultimi dati reali</b> delle ionosonde INGV (nessuna previsione). <b>Il risultato è rivolto al collegamento in SSB (fonia).</b> Scegliere le due province dai menu (con il menu aperto si può digitare la sigla per trovarla subito).</p>
     <form class="cg-row">
       <label>La tua provincia<select id="cg-a" required>${opts}</select></label>
       <label>Provincia del corrispondente<select id="cg-b" required>${opts}</select></label>
@@ -257,7 +314,7 @@ function mount() {
       : r.D0 <= 300 ? 'collegamento NVIS (antenne basse che irradiano verso l’alto)' : 'collegamento a un salto sullo strato F2';
     let big;
     if (r.best) {
-      big = `<div><div class="cg-small">Banda consigliata</div><div class="cg-band">${r.best.n}</div></div>
+      big = `<div><div class="cg-small">Banda consigliata per SSB</div><div class="cg-band">${r.best.n}</div></div>
              <div class="cg-small" style="flex:1;min-width:200px">${r.alt ? `Alternativa più sicura: <b>${r.alt.n}</b>. ` : ''}${r.marg.length ? `Al limite (tra FOT e MUF): ${r.marg.map(x => x.n).join(', ')}. ` : ''}${r.esBands.length ? `Possibile via E sporadico: ${r.esBands.map(x => x.n).join(', ')}.` : ''}</div>`;
     } else if (r.marg.length) {
       big = `<div><div class="cg-small">Nessuna banda pienamente aperta</div><div class="cg-band none">Prova ${r.marg[r.marg.length - 1].n} (al limite)</div></div>`;
@@ -267,9 +324,13 @@ function mount() {
     res.innerHTML = `
       <p style="margin:6px 0"><b>${esc(a[1])} (${a[0]}) ↔ ${esc(b[1])} (${b[0]})</b>: circa <b>${Math.round(r.D0)} km</b> – ${tipo}.</p>
       <div class="cg-big">${big}</div>
-      <div class="cg-chips">${r.righe.map(x => `<span class="cg-chip ${x.st}" title="${x.f} MHz">${x.n} ${TXT[x.st]}</span>`).join('')}</div>
+      <div class="cg-chips">${r.righe.map(x => `<span class="cg-chip ${x.st}" title="${x.f} MHz">${x.n} ${TXT[x.st]}${x.n === '30 m' ? ' (no SSB)' : ''}</span>`).join('')}</div>
       <p class="cg-small" style="margin:6px 0">MUF stimata per ${Math.round(r.D)} km: <b>${f1(r.muf)} MHz</b> · FOT (85%): <b>${f1(r.fot)} MHz</b> · foF2 al punto medio: ${f1(r.s.fof2)} MHz${r.s.ftes ? ` · ftEs: ${f1(r.s.ftes)} MHz` : ''}${r.day ? ' · di giorno: 160 m e, oltre 500 km, 80 m penalizzati dallo strato D' : ''}.</p>
       <p class="cg-small" style="margin:6px 0">Ionosfera stimata nel punto a metà strada pesando le ionosonde: ${pesi}. Dati delle ${hhmm(r.s.t)} (ora italiana). Calcolo tra i capoluoghi di provincia: è un’indicazione, la verifica vera resta l’ascolto in banda.</p>`;
+    const bandaCl = r.best ? r.best.n : r.marg.length ? r.marg[r.marg.length - 1].n : null;
+    const box = document.createElement('div'); box.innerHTML = '<p class="cg-small">Lettura degli spot del DX cluster…</p>';
+    res.insertBefore(box, res.querySelector('.cg-chips').nextSibling);
+    box.innerHTML = boxCluster(await leggiCluster(), bandaCl, AREA_DI[a[0]], AREA_DI[b[0]]);
   });
 }
 document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', mount) : mount();
