@@ -2,7 +2,7 @@ name: Aggiorna dati INGV
 
 on:
   schedule:
-           - cron: '5-59/15 * * * *'   # ogni 15 minuti, a :05 :20 :35 :50, subito dopo le misure INGV
+    - cron: '5-59/15 * * * *'   # ogni 15 minuti, a :05 :20 :35 :50, subito dopo le misure INGV (GitHub può ritardare di qualche minuto)
   workflow_dispatch:          # pulsante "Run workflow" per lanciarlo a mano
   push:
     branches: [main]
@@ -37,7 +37,7 @@ jobs:
         run: |
           mkdir -p data/img
           BASE="${{ steps.pages.outputs.base_url }}/data"
-          for f in rm041.json sp044.json ro041.json gm037d.json img/meta.json img/vert-rm041.gif img/vert-sp044.gif \
+          for f in rm041.json sp044.json ro041.json gm037d.json cluster.json img/meta.json img/vert-rm041.gif img/vert-sp044.gif \
                    img/obl-Rocca.png img/obl-Aquila.png img/obl-Duronia.png img/obl-CTesino.png img/obl-Lampedusa.png; do
             curl -fsS --max-time 20 "$BASE/$f" -o "data/$f" || rm -f "data/$f"
           done
@@ -45,9 +45,5 @@ jobs:
       - name: Scarica dati e ionogrammi dall'INGV
         run: node scripts/fetch-ingv.mjs
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-
-      - id: deploy
-        uses: actions/deploy-pages@v4
+      - name: Leggi gli spot SSB dal DX cluster (IQ1LA-6, login IQ0HL)
+   
