@@ -11,9 +11,10 @@
     --open:#1f9d55; --marg:#d9a400; --closed:#c9ced6; --abs:#e07b39; --es:#8a4fd8;
     --foF2:#2f6fdc; --muf:#d23d5b; --med:#8a96a3;
   }
-  @media (prefers-color-scheme: dark){
+  @media all /* tema scuro per tutti */{
     :root{ --bg:#0f1318; --card:#171c23; --ink:#e7ebf0; --mute:#97a3b0; --line:#2a313b; --closed:#39414c; --med:#6c7783; }
   }
+  :root{color-scheme:dark}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
   .wrap{max-width:1100px;margin:0 auto;padding:16px}
@@ -22,15 +23,15 @@
   header p.disclaimer{color:var(--ink);font-size:14px;margin:4px 0 2px}
   header .brand{color:#c2570c;font-weight:700;text-decoration:none}
   header a.brand:hover{text-decoration:underline}
-  @media (prefers-color-scheme: dark){header .brand{color:#fb923c}}
+  @media all{header .brand{color:#fb923c}}
   th.nvis,td.nvis{background:#e5f4e4;color:#14532d;font-weight:700}
-  @media (prefers-color-scheme: dark){th.nvis,td.nvis{background:#163a24;color:#86efac}}
+  @media all{th.nvis,td.nvis{background:#163a24;color:#86efac}}
   .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
   select,button{font:inherit;padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
   button{cursor:pointer}
   .status{font-size:13px;color:var(--mute)}
   .warn{background:#fff3cd;color:#6b5000;border:1px solid #f1d27a;padding:8px 12px;border-radius:8px;margin:8px 0;font-size:14px}
-  @media (prefers-color-scheme: dark){.warn{background:#3a3010;color:#f3dd95;border-color:#6b5a1d}}
+  @media all{.warn{background:#3a3010;color:#f3dd95;border-color:#6b5a1d}}
   .grid{display:grid;gap:12px}
   .grid>*{min-width:0}
   .kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
