@@ -46,4 +46,13 @@ jobs:
         run: node scripts/fetch-ingv.mjs
 
       - name: Leggi gli spot SSB dal DX cluster (IQ1LA-6, login IQ0HL)
-   
+        run: node scripts/fetch-cluster.mjs
+        continue-on-error: true
+        timeout-minutes: 3
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
