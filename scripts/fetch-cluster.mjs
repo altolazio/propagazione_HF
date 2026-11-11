@@ -20,6 +20,8 @@ const SSB = [
   ['20 m', 14125, 14350], ['17 m', 18111, 18168], ['15 m', 21151, 21450], ['12 m', 24931, 24990],
   ['10 m', 28300, 29000], ['6 m', 50100, 50500],
 ];
+// Frequenze digitali che cadono DENTRO i segmenti fonia (FT8/FT4/JS8 sui 40 m, FT8 sui 6 m): scartate anche senza commento.
+const DIGITALI = [[7070, 7080], [50310, 50320]];
 const NON_FONIA = /\b(FT8|FT-8|FT4|CW|RTTY|PSK\d*|JS8|JT65|JT9|Q65|MSK144|FST4|WSPR|SSTV|OLIVIA|DIGI|BEACON|BCN)\b/i;
 
 // Call area italiana dal nominativo: cifra 0–9, "S" per la Sardegna (IS0/IM0). null se non italiano.
@@ -51,7 +53,7 @@ export function leggiSpot(testo) {
 }
 export function soloFonia(spot) {
   const b = SSB.find(([, a, z]) => spot.f >= a && spot.f <= z);
-  if (!b || NON_FONIA.test(spot.c)) return null;
+  if (!b || NON_FONIA.test(spot.c) || DIGITALI.some(([a, z]) => spot.f >= a && spot.f <= z)) return null;
   return { t: spot.t, f: spot.f, b: b[0], dx: spot.dx, de: spot.de, adx: callArea(spot.dx), ade: callArea(spot.de) };
 }
 
