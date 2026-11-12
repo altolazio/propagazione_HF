@@ -49,6 +49,8 @@
   .cell{display:inline-block;min-width:64px;padding:3px 6px;border-radius:6px;font-size:12px;font-weight:600;color:#fff}
   .s-open{background:var(--open)} .s-marg{background:var(--marg);color:#222} .s-closed{background:var(--closed);color:var(--mute)}
   .s-abs{background:var(--abs)} .s-es{background:var(--es)} .s-nd{background:transparent;color:var(--mute);border:1px dashed var(--line)}
+  .sole-img{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-width:360px}.sole-img img{width:100%;border-radius:8px;border:1px solid var(--line);background:#000;cursor:zoom-in;aspect-ratio:1}.sole-img figcaption{font-size:11px;color:var(--mute);text-align:center}
+  .sole-t{width:100%;font-size:12px;margin-top:6px}.sole-t td{text-align:left;vertical-align:top;padding:3px 4px}.sole-t td:nth-child(2){white-space:nowrap}
   .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--mute);margin-top:8px}
   .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
   .chart{width:100%;height:auto;display:block}
@@ -540,43 +542,69 @@ function drawChart(recs, fc) {
 /* ================= VERIFICA REALE: PERCORSI WSPR TRA STAZIONI ITALIANE (data/wspr.json) ================= */
 const WSPR_BANDE = ['10 m', '12 m', '15 m', '17 m', '20 m', '40 m', '80 m', '160 m'];
 let wsprCache = null, wsprT = 0;
+async function caricaWspr() { const r = await fetch('data/wspr.json?v=' + Math.floor(Date.now() / 300e3), { cache: 'no-store' }); return r.ok ? await r.json() : null; }
 async function drawWspr(t0, t1, now, W, ml, mr) {
   const box = $('wspr'); if (!box) return;
   if (!wsprCache || Date.now() - wsprT > 10 * 60e3) {
-    try { const r = await fetch('data/wspr.json?v=' + Math.floor(Date.now() / 300e3), { cache: 'no-store' }); wsprCache = r.ok ? await r.json() : null; }
-    catch (e) { wsprCache = null; }
+    try { wsprCache = await caricaWspr(); } catch (e) { wsprCache = null; }
     wsprT = Date.now();
   }
   const tit = '<h3 style="margin:0 0 4px;font-size:15px">Verifica reale: percorsi radio tra stazioni italiane (rete WSPR, ultime 24 h)</h3>';
-  if (!wsprCache || !Array.isArray(wsprCache.ore)) { box.innerHTML = tit + '<p class="note">Dati WSPR non disponibili in questo momento.</p>'; return; }
-  // su schermi stretti righe e scritte più grandi, per restare leggibili
-  const sc = Math.min(1, (box.clientWidth || W) / W), fs = Math.max(11, 10 / sc), rh = Math.max(15, fs * 1.45), top = 4, Hh = top + WSPR_BANDE.length * rh + 6;
-  ml = Math.max(ml, fs * 3.3);   // spazio per i nomi delle bande (su desktop resta allineato al grafico)
-  const X = t => ml + (t - t0) / (t1 - t0) * (W - ml - mr);
-  const cell = {}; for (const o of wsprCache.ore) cell[o.b + '|' + o.t] = o;
-  let s = `<svg class="chart" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Percorsi WSPR tra stazioni italiane">`;
-  WSPR_BANDE.forEach((b, i) => {
-    const y = top + i * rh;
-    s += `<text x="${ml - 6}" y="${y + rh * .72}" text-anchor="end" style="font-size:${fs}px">${b}</text>`;
-    s += `<line x1="${ml}" x2="${X(now)}" y1="${y + rh}" y2="${y + rh}" stroke="var(--line)"/>`;
-    for (let t = Math.floor(t0 / H) * H; t < now; t += H) {
-      const o = cell[b + '|' + t]; if (!o) continue;
-      const x0 = Math.max(ml, X(t)), x1 = Math.min(X(now), X(t + H)); if (x1 <= x0) continue;
-      const ok = o.ok > 0, col = ok ? 'var(--open)' : 'var(--marg)';
-      const fine = new Date(Math.min(t + H, now));
-      s += `<rect x="${(x0 + .6).toFixed(1)}" y="${y + 2}" width="${Math.max(1, x1 - x0 - 1.2).toFixed(1)}" height="${rh - 4}" rx="2" fill="${col}" opacity="${ok ? .9 : .55}">` +
-        `<title>${b} · ${hhmm(t)}–${hhmm(fine)} IT\n${o.n} spot WSPR tra stazioni italiane (fino a ${o.km} km)\n${ok ? o.ok + ' con segnale sufficiente per SSB a 100 W' : 'solo segnali deboli (sufficienti per i modi digitali)'}\nmigliore: ${o.best > 0 ? '+' : ''}${o.best} dB a 100 W</title></rect>`;
-    }
-  });
-  const xf = X(now);
-  s += `<rect x="${xf}" y="${top}" width="${W - mr - xf}" height="${WSPR_BANDE.length * rh}" fill="var(--line)" opacity=".25"/>`;
-  s += `<text x="${(xf + W - mr) / 2}" y="${top + WSPR_BANDE.length * rh / 2 + 4}" text-anchor="middle" style="font-size:${fs}px">${sc < .6 ? 'solo passato' : 'il WSPR registra solo ciò che è già avvenuto'}</text>`;
-  s += `<line x1="${xf}" x2="${xf}" y1="${top}" y2="${top + WSPR_BANDE.length * rh}" stroke="var(--ink)" opacity=".5"/></svg>`;
-  box.innerHTML = tit + s +
-    '<div class="legend"><span><i style="background:var(--open)"></i>percorso con segnale sufficiente per SSB (stimato a 100 W)</span>' +
-    '<span><i style="background:var(--marg);opacity:.6"></i>solo segnali deboli, da modi digitali</span><span><i style="background:transparent;border:1px solid var(--line)"></i>nessuno spot</span></div>' +
-    `<p class="note" style="margin:4px 0 0">Stazioni WSPR italiane automatiche a bassa potenza, collegamenti tra 100 e 1500 km (dati wspr.live / WSPRnet, aggiornati alle ${hhmm(wsprCache.agg)}). ` +
-    'Il segnale ricevuto è riportato a 100 W: con almeno +10 dB su 2,5 kHz un QSO in fonia è normalmente possibile. Le stazioni sono poche: una casella vuota non significa banda chiusa. Passare il mouse su una casella per i dettagli.</p>';
+  // su schermi stretti righe e scritte più grandi; la striscia arriva fino ad "adesso", a destra il pannello "Il Sole adesso"
+  const sc = Math.min(1, (box.clientWidth || W) / W), stretto = sc < .6, fs = Math.max(11, (stretto ? 6 : 10) / sc), rh = Math.max(15, fs * 1.45), top = 4, yb = top + WSPR_BANDE.length * rh, Hh = yb + fs + 12;
+  ml = Math.max(ml, fs * 3.3);
+  const X = t => ml + (t - t0) / (t1 - t0) * (W - ml - mr), xn = X(now) + 2;
+  let s = '';
+  if (wsprCache && Array.isArray(wsprCache.ore)) {
+    const cell = {}; for (const o of wsprCache.ore) cell[o.b + '|' + o.t] = o;
+    s = `<div><svg class="chart" viewBox="0 0 ${xn} ${Hh}" role="img" aria-label="Percorsi WSPR tra stazioni italiane">`;
+    WSPR_BANDE.forEach((b, i) => {
+      const y = top + i * rh;
+      s += `<text x="${ml - 6}" y="${y + rh * .72}" text-anchor="end" style="font-size:${fs}px">${b}</text><line x1="${ml}" x2="${xn - 2}" y1="${y + rh}" y2="${y + rh}" stroke="var(--line)"/>`;
+      for (let t = Math.floor(t0 / H) * H; t < now; t += H) {
+        const o = cell[b + '|' + t]; if (!o) continue;
+        const x0 = Math.max(ml, X(t)), x1 = Math.min(xn - 2, X(t + H)); if (x1 <= x0) continue;
+        const ok = o.ok > 0;
+        s += `<rect x="${(x0 + .6).toFixed(1)}" y="${y + 2}" width="${Math.max(1, x1 - x0 - 1.2).toFixed(1)}" height="${rh - 4}" rx="2" fill="${ok ? 'var(--open)' : 'var(--marg)'}" opacity="${ok ? .9 : .55}">` +
+          `<title>${b} · ${hhmm(t)}–${hhmm(Math.min(t + H, now))} IT\n${o.n} spot WSPR tra stazioni italiane (fino a ${o.km} km)\n${ok ? o.ok + ' con segnale sufficiente per SSB a 100 W' : 'solo segnali deboli (sufficienti per i modi digitali)'}\nmigliore: ${o.best > 0 ? '+' : ''}${o.best} dB a 100 W</title></rect>`;
+      }
+    });
+    for (let t = Math.ceil(t0 / (3 * H)) * 3 * H; t < now - H / 2; t += 3 * H) s += `<text x="${X(t)}" y="${yb + fs + 6}" text-anchor="middle" style="font-size:${fs}px">${hhmm(t)}</text>`;   // stesse ore del grafico
+    s += `<line x1="${xn - 2}" x2="${xn - 2}" y1="${top}" y2="${yb}" stroke="var(--ink)" opacity=".5"/></svg></div><div>` +
+      '<div class="legend" style="margin-top:0"><span><i style="background:var(--open)"></i>segnale sufficiente per SSB (stimato a 100 W)</span><span><i style="background:var(--marg);opacity:.6"></i>solo segnali deboli, da modi digitali</span><span><i style="background:transparent;border:1px solid var(--line)"></i>nessuno spot</span></div>' +
+      `<p class="note" style="margin:4px 0 0">Stazioni WSPR italiane automatiche a bassa potenza, collegamenti tra 100 e 1500 km (dati wspr.live / WSPRnet, aggiornati alle ${hhmm(wsprCache.agg)}). Il segnale è riportato a 100 W: con almeno +10 dB su 2,5 kHz un QSO in fonia è normalmente possibile. Le stazioni sono poche: una casella vuota non significa banda chiusa. Passare il mouse su una casella per i dettagli.</p>`;
+    s += '</div>';
+  } else s = '<p class="note">Dati WSPR non disponibili in questo momento.</p>';
+  box.innerHTML = tit + `<div style="display:grid;grid-template-columns:${stretto ? '1fr' : (xn / W * 100).toFixed(2) + '% 1fr'};gap:14px;align-items:start">${s}</div>` +
+    '<div id="sole" class="sole" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line)"></div>';
+  drawSole($('sole'), stretto);
+}
+
+/* ================= IL SOLE ADESSO (immagini NASA/SDO, dati NOAA SWPC, letti dal browser) ================= */
+let soleCache = null, soleT = 0;
+async function drawSole(el, stretto) {
+  if (!el) return;
+  if (!soleCache || Date.now() - soleT > 30 * 60e3) {
+    soleCache = {};
+    try { const r = await fetch('https://services.swpc.noaa.gov/text/daily-solar-indices.txt'); const righe = (await r.text()).trim().split('\n').filter(l => /^\d{4} \d\d \d\d/.test(l));
+      const c = righe.at(-1).trim().split(/\s+/); soleCache.d = { data: `${c[2]}/${c[1]}`, sfi: +c[3], ssn: +c[4], C: +c[9], M: +c[10], X: +c[11] }; } catch (e) {}
+    try { const r = await fetch('https://services.swpc.noaa.gov/json/goes/primary/xray-flares-latest.json'); soleCache.x = (await r.json())[0]; } catch (e) {}
+    soleT = Date.now();
+  }
+  const d = soleCache.d, x = soleCache.x, img = (f, cap) => `<figure style="margin:0"><img src="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_${f}.jpg?v=${Math.floor(Date.now() / 3600e3)}" alt="${cap}" loading="lazy"><figcaption>${cap}</figcaption></figure>`;
+  const liv = (v, sogl, txt) => { for (let i = 0; i < sogl.length; i++) if (v < sogl[i]) return txt[i]; return txt.at(-1); };
+  let t = '';
+  if (d) {
+    t += `<tr><td>Numero di Wolf<br><span class="note">macchie solari, ${d.data}</span></td><td><b>${d.ssn}</b></td><td>${liv(d.ssn, [30, 80, 150], ['Sole quasi senza macchie: bande alte (15–10 m) di solito chiuse', 'attività moderata: 20 m affidabili, bande alte a tratti', 'molte macchie: ionosfera più carica, 15–10 m spesso aperti di giorno', 'attività molto alta: ottime aperture fino ai 10 m (e talvolta 6 m)'])}</td></tr>`;
+    t += `<tr><td>Flusso solare<br><span class="note">10,7 cm (SFI), ${d.data}</span></td><td><b>${d.sfi}</b></td><td>${liv(d.sfi, [80, 110, 150], ['basso: MUF bassa, preferire 40–80 m', 'medio: 20 m buoni, 15 m a tratti', 'buono: 15–12 m aperti di giorno', 'alto: anche 10 m aperti in pieno giorno'])}</td></tr>`;
+    t += `<tr><td>Brillamenti<br><span class="note">${d.data}</span></td><td><b>C ${d.C} · M ${d.M} · X ${d.X}</b></td><td>${d.X ? 'brillamenti X: possibili blackout radio HF sul lato illuminato' : d.M ? 'brillamenti M: brevi affievolimenti (fadeout) delle HF di giorno' : 'nessun brillamento forte'}</td></tr>`;
+  }
+  if (x) t += `<tr><td>Raggi X adesso<br><span class="note">satellite GOES</span></td><td><b>${x.current_class || '–'}</b></td><td>${/^[MX]/.test(x.current_class || '') ? 'brillamento in corso: possibile fadeout delle HF sul lato giorno' : 'livello normale'}${x.max_class ? ` · ultimo brillamento ${x.max_class} alle ${hhmm(Date.parse(x.max_time))}` : ''}</td></tr>`;
+  el.innerHTML = '<h3 style="margin:0 0 6px;font-size:15px">Il Sole adesso</h3>' +
+    `<div style="display:grid;grid-template-columns:${stretto ? '1fr' : 'minmax(0,360px) 1fr'};gap:14px;align-items:start">` +
+    `<div class="sole-img">${img('HMIIC', 'Macchie solari (luce visibile)')}${img('0193', 'Corona e brillamenti (ultravioletto)')}</div><div>` +
+    (t ? `<table class="sole-t" style="margin-top:0">${t}</table>` : '<p class="note">Dati solari NOAA non disponibili in questo momento.</p>') +
+    '<p class="note" style="margin:4px 0 0">Più macchie e flusso alto = ionosfera più carica e bande alte più aperte. I brillamenti forti possono invece “spegnere” per minuti le HF di giorno. Immagini NASA/SDO (toccare per ingrandire), dati NOAA SWPC.</p></div></div>';
 }
 
 /* ================= CONFRONTO STAZIONI ================= */
@@ -666,12 +694,14 @@ $('reload').addEventListener('click', () => { update(false); renderImages($('sta
   document.body.appendChild(z);
   const zi = z.querySelector('img'), cap = z.querySelector('.cap');
   const close = () => { z.classList.remove('on'); document.body.style.overflow = ''; };
-  $('imgs').addEventListener('click', e => {
+  const apri = e => {
     const img = e.target.closest('img'); if (!img || !img.naturalWidth) return;
     zi.src = img.currentSrc || img.src; zi.alt = img.alt;
     cap.textContent = img.closest('figure')?.querySelector('figcaption')?.textContent || '';
     z.classList.add('on'); z.scrollTop = 0; document.body.style.overflow = 'hidden';
-  });
+  };
+  $('imgs').addEventListener('click', apri);
+  $('wspr')?.addEventListener('click', apri);   // immagini del Sole
   z.addEventListener('click', close);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 })();
