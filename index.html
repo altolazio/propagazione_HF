@@ -110,6 +110,7 @@
       <span><i style="background:var(--med)"></i>mediana 27 giorni</span>
       <span><i style="background:var(--muf);opacity:.25"></i>previsione MUF con fascia di incertezza (≈68%)</span>
     </div>
+    <div id="wspr" style="margin-top:14px"></div>
   </section>
 
   <section class="grid two" style="margin-top:12px">
@@ -533,6 +534,49 @@ function drawChart(recs, fc) {
     tip.style.left = Math.min(ev.clientX - host.left + 12, host.width - 230) + 'px'; tip.style.top = (ev.clientY - host.top + 12) + 'px';
   });
   svg.addEventListener('mouseleave', () => { tip.style.display = 'none'; cur.setAttribute('opacity', 0); });
+  drawWspr(t0, t1, now, W, ml, mr);
+}
+
+/* ================= VERIFICA REALE: PERCORSI WSPR TRA STAZIONI ITALIANE (data/wspr.json) ================= */
+const WSPR_BANDE = ['10 m', '12 m', '15 m', '17 m', '20 m', '40 m', '80 m', '160 m'];
+let wsprCache = null, wsprT = 0;
+async function drawWspr(t0, t1, now, W, ml, mr) {
+  const box = $('wspr'); if (!box) return;
+  if (!wsprCache || Date.now() - wsprT > 10 * 60e3) {
+    try { const r = await fetch('data/wspr.json?v=' + Math.floor(Date.now() / 300e3), { cache: 'no-store' }); wsprCache = r.ok ? await r.json() : null; }
+    catch (e) { wsprCache = null; }
+    wsprT = Date.now();
+  }
+  const tit = '<h3 style="margin:0 0 4px;font-size:15px">Verifica reale: percorsi radio tra stazioni italiane (rete WSPR, ultime 24 h)</h3>';
+  if (!wsprCache || !Array.isArray(wsprCache.ore)) { box.innerHTML = tit + '<p class="note">Dati WSPR non disponibili in questo momento.</p>'; return; }
+  // su schermi stretti righe e scritte più grandi, per restare leggibili
+  const sc = Math.min(1, (box.clientWidth || W) / W), fs = Math.max(11, 10 / sc), rh = Math.max(15, fs * 1.45), top = 4, Hh = top + WSPR_BANDE.length * rh + 6;
+  ml = Math.max(ml, fs * 3.3);   // spazio per i nomi delle bande (su desktop resta allineato al grafico)
+  const X = t => ml + (t - t0) / (t1 - t0) * (W - ml - mr);
+  const cell = {}; for (const o of wsprCache.ore) cell[o.b + '|' + o.t] = o;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Percorsi WSPR tra stazioni italiane">`;
+  WSPR_BANDE.forEach((b, i) => {
+    const y = top + i * rh;
+    s += `<text x="${ml - 6}" y="${y + rh * .72}" text-anchor="end" style="font-size:${fs}px">${b}</text>`;
+    s += `<line x1="${ml}" x2="${X(now)}" y1="${y + rh}" y2="${y + rh}" stroke="var(--line)"/>`;
+    for (let t = Math.floor(t0 / H) * H; t < now; t += H) {
+      const o = cell[b + '|' + t]; if (!o) continue;
+      const x0 = Math.max(ml, X(t)), x1 = Math.min(X(now), X(t + H)); if (x1 <= x0) continue;
+      const ok = o.ok > 0, col = ok ? 'var(--open)' : 'var(--marg)';
+      const fine = new Date(Math.min(t + H, now));
+      s += `<rect x="${(x0 + .6).toFixed(1)}" y="${y + 2}" width="${Math.max(1, x1 - x0 - 1.2).toFixed(1)}" height="${rh - 4}" rx="2" fill="${col}" opacity="${ok ? .9 : .55}">` +
+        `<title>${b} · ${hhmm(t)}–${hhmm(fine)} IT\n${o.n} spot WSPR tra stazioni italiane (fino a ${o.km} km)\n${ok ? o.ok + ' con segnale sufficiente per SSB a 100 W' : 'solo segnali deboli (sufficienti per i modi digitali)'}\nmigliore: ${o.best > 0 ? '+' : ''}${o.best} dB a 100 W</title></rect>`;
+    }
+  });
+  const xf = X(now);
+  s += `<rect x="${xf}" y="${top}" width="${W - mr - xf}" height="${WSPR_BANDE.length * rh}" fill="var(--line)" opacity=".25"/>`;
+  s += `<text x="${(xf + W - mr) / 2}" y="${top + WSPR_BANDE.length * rh / 2 + 4}" text-anchor="middle" style="font-size:${fs}px">${sc < .6 ? 'solo passato' : 'il WSPR registra solo ciò che è già avvenuto'}</text>`;
+  s += `<line x1="${xf}" x2="${xf}" y1="${top}" y2="${top + WSPR_BANDE.length * rh}" stroke="var(--ink)" opacity=".5"/></svg>`;
+  box.innerHTML = tit + s +
+    '<div class="legend"><span><i style="background:var(--open)"></i>percorso con segnale sufficiente per SSB (stimato a 100 W)</span>' +
+    '<span><i style="background:var(--marg);opacity:.6"></i>solo segnali deboli, da modi digitali</span><span><i style="background:transparent;border:1px solid var(--line)"></i>nessuno spot</span></div>' +
+    `<p class="note" style="margin:4px 0 0">Stazioni WSPR italiane automatiche a bassa potenza, collegamenti tra 100 e 1500 km (dati wspr.live / WSPRnet, aggiornati alle ${hhmm(wsprCache.agg)}). ` +
+    'Il segnale ricevuto è riportato a 100 W: con almeno +10 dB su 2,5 kHz un QSO in fonia è normalmente possibile. Le stazioni sono poche: una casella vuota non significa banda chiusa. Passare il mouse su una casella per i dettagli.</p>';
 }
 
 /* ================= CONFRONTO STAZIONI ================= */

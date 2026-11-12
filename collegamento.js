@@ -221,6 +221,35 @@ function boxCluster(c, banda, A, B) {
   return `<div class="cg-cl">${tit}<ul>${righe.join('')}</ul>${vecchio}${nota}</div>`;
 }
 
+/* ---------- percorsi WSPR dell'ultima ora (data/wspr.json): dato digitale, solo indicativo ---------- */
+const locLL = l => [(l.charCodeAt(1) - 65) * 10 + +l[3] + .5 - 90, (l.charCodeAt(0) - 65) * 20 + +l[2] * 2 + 1 - 180];
+let wsprC = null, wsprCT = 0;
+async function leggiWspr() {
+  if (wsprC && Date.now() - wsprCT < 5 * 60e3) return wsprC;
+  try { const r = await fetch('data/wspr.json?v=' + Math.floor(Date.now() / 300e3), { cache: 'no-store' }); wsprC = r.ok ? await r.json() : null; } catch { wsprC = null; }
+  if (!wsprC) try {   // anteprima sul PC (nessun file data/): chiede direttamente a wspr.live
+    const NB = { 1: '160 m', 3: '80 m', 7: '40 m', 14: '20 m', 18: '17 m', 21: '15 m', 24: '12 m', 28: '10 m' }, I = "'^I[A-Z]?[0-9]'";
+    const q = `SELECT toUnixTimestamp(time), band, substring(tx_loc,1,4), substring(rx_loc,1,4), distance, snr+50-power FROM wspr.rx WHERE time > now() - INTERVAL 75 MINUTE AND match(tx_sign,${I}) AND match(rx_sign,${I}) AND distance BETWEEN 100 AND 1500 AND band IN (${Object.keys(NB)}) LIMIT 500 FORMAT JSONCompact`;
+    const j = await (await fetch('https://db1.wspr.live/?query=' + encodeURIComponent(q))).json();
+    wsprC = { ult: j.data.map(([t, b, tl, rl, km, x]) => [t * 1000, NB[b], tl, rl, +km, +x]) };
+  } catch { wsprC = null; }
+  wsprCT = Date.now(); return wsprC;
+}
+function boxWspr(w, banda, mid, D0) {
+  const tit = '<b>Percorsi WSPR tra stazioni italiane – ultima ora</b>';
+  if (!banda) return '';
+  if (!w || !Array.isArray(w.ult)) return `<div class="cg-cl">${tit}<p class="cg-small" style="margin:4px 0">Dati WSPR non disponibili in questo momento.</p></div>`;
+  const L = w.ult.filter(x => x[1] === banda && x[0] >= Date.now() - UN_ORA), ok = L.filter(x => x[5] >= 10).length;
+  let simile = '';
+  if (L.length) {   // il percorso più simile al vostro: distanza e punto medio vicini
+    const sc = x => Math.abs(x[4] - D0) + distanza([0, ...puntoMedio([0, ...locLL(x[2])], [0, ...locLL(x[3])])], [0, ...mid]);
+    const m = L.reduce((u, v) => sc(v) < sc(u) ? v : u);
+    simile = ` – il più simile al vostro: ${esc(m[2])} → ${esc(m[3])}, ${m[4]} km, ${m[5] > 0 ? '+' : ''}${m[5]} dB alle ${hhmm(m[0])}`;
+  }
+  return `<div class="cg-cl">${tit}<ul><li>Su <b>${banda}</b>: <b>${L.length}</b> spot, di cui <b>${ok}</b> con segnale sufficiente per SSB${simile}.</li></ul>` +
+    '<p class="cg-small" style="margin:4px 0 0">Dato <b>digitale</b>: stazioni WSPR automatiche a bassa potenza (fonte wspr.live). Il segnale è riportato a 100 W: con almeno +10 dB su 2,5 kHz un QSO in fonia è normalmente possibile. Solo indicativo.</p></div>';
+}
+
 /* ---------- interfaccia ---------- */
 const CSS = `
 .cg-btn{font:inherit;padding:5px 11px;border-radius:7px;border:1px solid var(--foF2,#2f6fdc);background:var(--foF2,#2f6fdc);color:#fff;cursor:pointer;font-weight:600}
@@ -331,6 +360,7 @@ function mount() {
     const box = document.createElement('div'); box.innerHTML = '<p class="cg-small">Lettura degli spot del DX cluster…</p>';
     res.insertBefore(box, res.querySelector('.cg-chips').nextSibling);
     box.innerHTML = boxCluster(await leggiCluster(), bandaCl, AREA_DI[a[0]], AREA_DI[b[0]]);
+    const bw = document.createElement('div'); box.after(bw); bw.innerHTML = boxWspr(await leggiWspr(), bandaCl, r.mid, r.D0);
   });
 }
 document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', mount) : mount();
