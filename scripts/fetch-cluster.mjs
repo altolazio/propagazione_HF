@@ -1,4 +1,4 @@
-// Legge dal DX cluster gli spot recenti che riguardano stazioni italiane e salva SOLO quelli in fonia (SSB)
+// Legge dal DX cluster gli spot recenti (e, tramite fetch-wspr.mjs, i percorsi WSPR italiani) che riguardano stazioni italiane e salva SOLO quelli in fonia (SSB)
 // in data/cluster.json, per il "Calcolatore QSO". Lanciato ogni 15 minuti dal workflow "Aggiorna dati INGV".
 // Un solo collegamento di pochi secondi: login con il nominativo della sezione, due comandi di sola lettura, "bye".
 // Non invia mai spot. Se il cluster non risponde lascia il file precedente e non blocca l'aggiornamento INGV.
@@ -86,6 +86,9 @@ function interroga([nodo, nome, host, port]) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  // prima i percorsi WSPR italiani per il grafico (indipendenti dal cluster)
+  try { const { aggiornaWspr } = await import('./fetch-wspr.mjs'); console.log(`wspr.json: ${await aggiornaWspr()} caselle ora/banda.`); }
+  catch (e) { console.log('WSPR non disponibile: ' + e.message); }
   let ris = null;
   for (const n of NODI) {
     const r = await interroga(n);
