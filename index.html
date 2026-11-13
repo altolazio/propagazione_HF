@@ -18,6 +18,12 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
   .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  .site-top{display:flex;align-items:center;gap:16px;margin:0 0 14px}
+  .site-top #site-banner{display:block;flex:1 1 auto;min-width:0;width:100%;max-width:960px;height:auto;border-radius:10px}
+  .supporto{flex:0 0 136px;text-align:center;font-size:12px;color:#c2570c;font-weight:600;line-height:1.2}
+  .supporto a{display:block;margin-top:6px}
+  .supporto img{display:block;width:auto;height:118px;margin:0 auto}
+  @media (max-width:640px){.site-top{flex-direction:column;gap:8px}.supporto{flex:none}.supporto img{height:90px}}
   header h1{font-size:22px;margin:0 0 2px}
   header p{margin:0;color:var(--mute);font-size:13px}
   header p.disclaimer{color:var(--ink);font-size:14px;margin:4px 0 2px}
@@ -75,11 +81,14 @@
 </head>
 <body>
 <div class="wrap" id="iono-app">
-  <img id="site-banner" src="banner.jpg" alt="A.R.I. Associazione Radioamatori Italiani – Sezione Alto Lazio IQØHL – Gutta cavat lapidem – www.arialtolazio.it" width="960" height="150" style="display:block;width:100%;max-width:960px;height:auto;margin:0 auto 14px;border-radius:10px">
-  <script>try{if(window.self!==window.top)document.getElementById('site-banner').style.display='none'}catch(e){document.getElementById('site-banner').style.display='none'}</script>
+  <div id="site-top" class="site-top">
+    <img id="site-banner" src="banner.jpg" alt="A.R.I. Associazione Radioamatori Italiani – Sezione Alto Lazio IQØHL – Gutta cavat lapidem – www.arialtolazio.it" width="960" height="150">
+    <div class="supporto">Con il supporto di<a href="https://www.amsat.it" target="_blank" rel="noopener" title="AMSAT Italia (si apre in una nuova finestra)"><img src="amsat-italia.png" alt="AMSAT Italia" width="225" height="256"></a></div>
+  </div>
+  <script>try{if(window.self!==window.top)document.getElementById('site-top').style.display='none'}catch(e){document.getElementById('site-top').style.display='none'}</script>
   <header>
     <h1>Progetto sperimentale di previsione della propagazione radio nelle bande radioamatoriali HF</h1>
-    <p class="disclaimer">Elaborazione dati automatica, in via sperimentale, non a cura di I.N.G.V. ma da modello elaborato con I.A. <a class="brand" href="https://www.arialtolazio.it" target="_blank" rel="noopener" title="Sito della Sezione A.R.I. Alto Lazio (si apre in una nuova finestra)">Un progetto della sez. A.R.I. Alto Lazio</a> · <a class="brand" href="https://www.arialtolazio.it" target="_blank" rel="noopener" title="Sito della Sezione A.R.I. Alto Lazio (si apre in una nuova finestra)">www.arialtolazio.it</a></p>
+    <p class="disclaimer">Elaborazione dati automatica, in via sperimentale, non a cura di I.N.G.V. ma da modello elaborato con I.A. <a class="brand" href="https://www.arialtolazio.it" target="_blank" rel="noopener" title="Sito della Sezione A.R.I. Alto Lazio (si apre in una nuova finestra)">Progetto della sez. A.R.I. Alto Lazio</a> · <a class="brand" href="https://www.arialtolazio.it" target="_blank" rel="noopener" title="Sito della Sezione A.R.I. Alto Lazio (si apre in una nuova finestra)">www.arialtolazio.it</a></p>
     <p>Dati in tempo reale delle ionosonde INGV di Roma, La Spezia e Gibilmanna · previsione a 24 ore · <a class="brand" href="http://www.eswua.ingv.it/" target="_blank" rel="noopener" title="Servizio eSWua dell'INGV, fonte dei dati delle ionosonde (si apre in una nuova finestra)">www.eswua.ingv.it</a> · aggiornamento automatico</p>
   </header>
 
