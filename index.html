@@ -18,12 +18,11 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
   .wrap{max-width:1100px;margin:0 auto;padding:16px}
-  .site-top{display:flex;align-items:center;gap:16px;margin:0 0 14px}
-  .site-top #site-banner{display:block;flex:1 1 auto;min-width:0;width:100%;max-width:960px;height:auto;border-radius:10px}
-  .supporto{flex:0 0 136px;text-align:center;font-size:12px;color:#c2570c;font-weight:600;line-height:1.2}
-  .supporto a{display:block;margin-top:6px}
-  .supporto img{display:block;width:auto;height:118px;margin:0 auto}
-  @media (max-width:640px){.site-top{flex-direction:column;gap:8px}.supporto{flex:none}.supporto img{height:90px}}
+  .site-top{display:flex;align-items:center;gap:clamp(6px,1.5vw,16px);margin:0 0 14px}
+  .site-top #site-banner{display:block;flex:1 1 auto;min-width:0;width:100%;max-width:960px;height:auto;border-radius:clamp(5px,1vw,10px)}
+  .supporto{flex:0 0 12.5%;max-width:136px;text-align:center;font-size:clamp(6px,1.1vw,12px);color:#c2570c;font-weight:600;line-height:1.15}
+  .supporto a{display:block;margin-top:clamp(2px,0.5vw,6px)}
+  .supporto img{display:block;width:76%;height:auto;margin:0 auto}
   header h1{font-size:22px;margin:0 0 2px}
   header p{margin:0;color:var(--mute);font-size:13px}
   header p.disclaimer{color:var(--ink);font-size:14px;margin:4px 0 2px}
