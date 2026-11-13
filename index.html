@@ -568,19 +568,32 @@ async function drawWspr(t0, t1, now, W, ml, mr) {
         const o = cell[b + '|' + t]; if (!o) continue;
         const x0 = Math.max(ml, X(t)), x1 = Math.min(xn - 2, X(t + H)); if (x1 <= x0) continue;
         const ok = o.ok > 0;
-        s += `<rect x="${(x0 + .6).toFixed(1)}" y="${y + 2}" width="${Math.max(1, x1 - x0 - 1.2).toFixed(1)}" height="${rh - 4}" rx="2" fill="${ok ? 'var(--open)' : 'var(--marg)'}" opacity="${ok ? .9 : .55}">` +
-          `<title>${b} · ${hhmm(t)}–${hhmm(Math.min(t + H, now))} IT\n${o.n} spot WSPR tra stazioni italiane (fino a ${o.km} km)\n${ok ? o.ok + ' con segnale sufficiente per SSB a 100 W' : 'solo segnali deboli (sufficienti per i modi digitali)'}\nmigliore: ${o.best > 0 ? '+' : ''}${o.best} dB a 100 W</title></rect>`;
+        s += `<rect x="${(x0 + .6).toFixed(1)}" y="${y + 2}" width="${Math.max(1, x1 - x0 - 1.2).toFixed(1)}" height="${rh - 4}" rx="2" fill="${ok ? 'var(--open)' : 'var(--marg)'}" opacity="${ok ? .9 : .55}" style="cursor:pointer" ` +
+          `data-tip="<b>${b} · ${hhmm(t)}–${hhmm(Math.min(t + H, now))}</b> IT<br>${o.n} spot WSPR tra stazioni italiane (fino a ${o.km} km)<br>${ok ? o.ok + ' con segnale sufficiente per SSB a 100 W' : 'solo segnali deboli (sufficienti per i modi digitali)'}<br>migliore: ${o.best > 0 ? '+' : ''}${o.best} dB a 100 W"></rect>`;
       }
     });
     for (let t = Math.ceil(t0 / (3 * H)) * 3 * H; t < now - H / 2; t += 3 * H) s += `<text x="${X(t)}" y="${yb + fs + 6}" text-anchor="middle" style="font-size:${fs}px">${hhmm(t)}</text>`;   // stesse ore del grafico
     s += `<line x1="${xn - 2}" x2="${xn - 2}" y1="${top}" y2="${yb}" stroke="var(--ink)" opacity=".5"/></svg></div><div>` +
       '<div class="legend" style="margin-top:0"><span><i style="background:var(--open)"></i>segnale sufficiente per SSB (stimato a 100 W)</span><span><i style="background:var(--marg);opacity:.6"></i>solo segnali deboli, da modi digitali</span><span><i style="background:transparent;border:1px solid var(--line)"></i>nessuno spot</span></div>' +
-      `<p class="note" style="margin:4px 0 0">Stazioni WSPR italiane automatiche a bassa potenza, collegamenti tra 100 e 1500 km (dati wspr.live / WSPRnet, aggiornati alle ${hhmm(wsprCache.agg)}). Il segnale è riportato a 100 W: con almeno +10 dB su 2,5 kHz un QSO in fonia è normalmente possibile. Le stazioni sono poche: una casella vuota non significa banda chiusa. Passare il mouse su una casella per i dettagli.</p>`;
+      `<p class="note" style="margin:4px 0 0">Stazioni WSPR italiane automatiche a bassa potenza, collegamenti tra 100 e 1500 km (dati wspr.live / WSPRnet, aggiornati alle ${hhmm(wsprCache.agg)}). Il segnale è riportato a 100 W: con almeno +10 dB su 2,5 kHz un QSO in fonia è normalmente possibile. Le stazioni sono poche: una casella vuota non significa banda chiusa. Passare il mouse o toccare una casella per i dettagli.</p>`;
     s += '</div>';
   } else s = '<p class="note">Dati WSPR non disponibili in questo momento.</p>';
   box.innerHTML = tit + `<div style="display:grid;grid-template-columns:${stretto ? '1fr' : (xn / W * 100).toFixed(2) + '% 1fr'};gap:14px;align-items:start">${s}</div>` +
     '<div id="sole" class="sole" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line)"></div>';
   drawSole($('sole'), stretto);
+  // dettagli della casella: al passaggio del mouse e al tocco (i tooltip nativi non funzionano su telefoni e tablet)
+  const card = box.parentElement; let tip = card.querySelector('.tip.wspr');
+  if (!tip) { tip = document.createElement('div'); tip.className = 'tip wspr'; tip.style.whiteSpace = 'normal'; tip.style.maxWidth = '260px'; card.appendChild(tip); }
+  const mostra = ev => {
+    const r = ev.target.closest && ev.target.closest('rect[data-tip]');
+    if (!r) { tip.style.display = 'none'; return; }
+    tip.innerHTML = r.getAttribute('data-tip'); tip.style.display = 'block';
+    const h = card.getBoundingClientRect(), x = ev.clientX - h.left, y = ev.clientY - h.top;
+    tip.style.left = Math.max(4, Math.min(x + 12, h.width - tip.offsetWidth - 4)) + 'px'; tip.style.top = (y + 14) + 'px';
+  };
+  const svgW = box.querySelector('svg');
+  if (svgW) { svgW.addEventListener('pointermove', mostra); svgW.addEventListener('click', mostra); svgW.addEventListener('pointerleave', ev => { if (ev.pointerType === 'mouse') tip.style.display = 'none'; }); }
+  if (!box.dataset.tipClose) { box.dataset.tipClose = 1; document.addEventListener('click', ev => { if (!ev.target.closest('#wspr svg')) { const t = document.querySelector('.tip.wspr'); if (t) t.style.display = 'none'; } }); }
 }
 
 /* ================= IL SOLE ADESSO (immagini NASA/SDO, dati NOAA SWPC, letti dal browser) ================= */
