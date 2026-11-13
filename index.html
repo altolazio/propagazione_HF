@@ -700,9 +700,10 @@ async function update(full) {
     render(st, recs, kpCache);
     if (full) renderImages(st);
     renderItalia(st).catch(() => {});
-    $('status').textContent = (CFG.staticData && dataUpdated)
-      ? `Dati scaricati dall'INGV alle ${hhmm(dataUpdated)} · la pagina ricontrolla ogni ${CFG.refreshMin} min`
-      : `Aggiornato alle ${hhmm(Date.now())} · prossimo aggiornamento tra ${CFG.refreshMin} min`;
+    if (CFG.staticData && dataUpdated) {
+      const fresco = Date.now() - dataUpdated < 3600e3;
+      $('status').innerHTML = `<b style="color:${fresco ? 'var(--open)' : '#fff'}" title="${fresco ? 'Dati scaricati nell’ultima ora' : 'Dati scaricati più di un’ora fa'}">Dati scaricati dall'INGV alle ${hhmm(dataUpdated)}</b> · la pagina ricontrolla ogni ${CFG.refreshMin} min`;
+    } else $('status').textContent = `Aggiornato alle ${hhmm(Date.now())} · prossimo aggiornamento tra ${CFG.refreshMin} min`;
   } catch (e) {
     $('status').textContent = 'Errore nel caricamento dei dati INGV (' + e.message + '). Nuovo tentativo tra poco.';
     if (CFG.staticData) $('status').textContent += ' Se la pagina è appena stata pubblicata, controllare che l’azione “Aggiorna dati INGV” su GitHub sia stata eseguita almeno una volta.';
