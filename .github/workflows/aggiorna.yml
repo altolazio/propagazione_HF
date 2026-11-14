@@ -8,7 +8,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write     # serve per salvare l'archivio storico nel ramo "archivio"
   pages: write
   id-token: write
 
@@ -37,13 +37,45 @@ jobs:
         run: |
           mkdir -p data/img
           BASE="${{ steps.pages.outputs.base_url }}/data"
-          for f in rm041.json sp044.json ro041.json gm037d.json img/meta.json img/vert-rm041.gif img/vert-sp044.gif \
+          for f in rm041.json sp044.json ro041.json gm037d.json cluster.json img/meta.json img/vert-rm041.gif img/vert-sp044.gif \
                    img/obl-Rocca.png img/obl-Aquila.png img/obl-Duronia.png img/obl-CTesino.png img/obl-Lampedusa.png; do
             curl -fsS --max-time 20 "$BASE/$f" -o "data/$f" || rm -f "data/$f"
           done
 
       - name: Scarica dati e ionogrammi dall'INGV
         run: node scripts/fetch-ingv.mjs
+
+      - name: Leggi gli spot SSB dal DX cluster (IQ1LA-6, login IQ0HL)
+        run: node scripts/fetch-cluster.mjs
+        continue-on-error: true
+        timeout-minutes: 3
+
+      - name: Archivio storico (una volta all'ora, ramo "archivio")
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ARCH="$RUNNER_TEMP/archivio"
+          URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$URL" archivio >/dev/null 2>&1; then
+            git clone -q --depth 1 --branch archivio "$URL" "$ARCH"
+          else
+            mkdir -p "$ARCH" && git -C "$ARCH" init -q -b archivio && git -C "$ARCH" remote add origin "$URL"
+            cp ARCHIVIO-LEGGIMI.md "$ARCH/LEGGIMI.md" 2>/dev/null || true
+            cp ARCHIVIO-CAMBIAMENTI.md "$ARCH/CAMBIAMENTI.md" 2>/dev/null || true
+          fi
+          node scripts/archivio.mjs "$ARCH"
+          cp ARCHIVIO-LEGGIMI.md "$ARCH/LEGGIMI.md" 2>/dev/null || true
+          cp ARCHIVIO-CAMBIAMENTI.md "$ARCH/CAMBIAMENTI.md" 2>/dev/null || true
+          cd "$ARCH"
+          git config user.name "archivio-propagazione"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -q -m "Archivio $(date -u +%Y-%m-%dT%H:00Z)"
+            git push -q origin archivio
+          fi
 
       - uses: actions/upload-pages-artifact@v3
         with:
