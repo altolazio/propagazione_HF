@@ -37,18 +37,13 @@ jobs:
         run: |
           mkdir -p data/img
           BASE="${{ steps.pages.outputs.base_url }}/data"
-          for f in rm041.json sp044.json ro041.json gm037d.json cluster.json img/meta.json img/vert-rm041.gif img/vert-sp044.gif \
+          for f in rm041.json sp044.json ro041.json gm037d.json img/meta.json img/vert-rm041.gif img/vert-sp044.gif \
                    img/obl-Rocca.png img/obl-Aquila.png img/obl-Duronia.png img/obl-CTesino.png img/obl-Lampedusa.png; do
             curl -fsS --max-time 20 "$BASE/$f" -o "data/$f" || rm -f "data/$f"
           done
 
       - name: Scarica dati e ionogrammi dall'INGV
         run: node scripts/fetch-ingv.mjs
-
-      - name: Leggi gli spot SSB dal DX cluster (IQ1LA-6, login IQ0HL)
-        run: node scripts/fetch-cluster.mjs
-        continue-on-error: true
-        timeout-minutes: 3
 
       - uses: actions/upload-pages-artifact@v3
         with:
