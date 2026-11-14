@@ -66,7 +66,7 @@ async function station(st, cfg) {
   const last = recs.at(-1);
   recs = recs.filter(x => +x.dt.slice(14, 16) % 15 === 0 || x === last);
   return { station: st, updated: new Date().toISOString(), newRecords: fresh.length,
-           source: 'INGV eSWua – doi:10.13127/ESWUA/HF – CC BY 4.0', records: recs };
+           source: 'INGV eSWua – doi:10.13127/ESWUA/HF – CC BY 4.0', records: recs, grezzi: fresh };
 }
 
 async function saveImage(url, file) {
@@ -80,8 +80,9 @@ await mkdir(`${OUT}/img`, { recursive: true });
 let ok = 0;
 for (const [st, cfg] of Object.entries(STATIONS)) {
   try {
-    const d = await station(st, cfg);
+    const { grezzi, ...d } = await station(st, cfg);
     await writeFile(`${OUT}/${st}.json`, JSON.stringify(d));
+    await writeFile(`${OUT}/grezzi-${st}.json`, JSON.stringify(grezzi));   // misure scaricate in questo giro, a piena risoluzione (per l'archivio storico)
     console.log(st, d.records.length, 'record (nuovi:', d.newRecords + '), ultimo', d.records.at(-1)?.dt);
     ok++;
   } catch (e) { console.error('ERRORE', st, e.message); }
