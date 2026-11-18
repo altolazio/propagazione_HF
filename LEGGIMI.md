@@ -62,6 +62,13 @@ Zero percorsi può voler dire banda chiusa oppure nessuna stazione attiva su que
 Spot in fonia fatti da o verso stazioni italiane (nodo IQ1LA-6 di A.R.I. Loano, riserva IW1PSC-6).
 `area_dx` / `area_spotter` = zona di nominativo italiana (0–9, S = Sardegna).
 
+### rete_ore.csv – rete WSPR della Sezione
+Solo per le stazioni elencate (attiva = si) in `rete/rete.csv` del ramo main. Per ogni ora, banda e coppia di stazioni
+della rete: `sentito` = 1 se `rx` ha decodificato `tx`, 0 se NON l'ha decodificato pur essendo entrambe attive su quella
+banda in quell'ora (tx sentita da qualcun altro, rx che riceveva altre stazioni). Le coppie senza queste condizioni non
+compaiono (nessuna informazione). `snr_max_100w_db` è riportato a 100 W; `ionosonda_vicina` e `km_da_ionosonda` si
+riferiscono al punto medio del percorso (rm041 = Roma, sp044 = La Spezia, gm037d = Gibilmanna).
+
 ### meteo_spazio.csv – meteo spaziale (NOAA SWPC)
 Ogni ora: ultimo indice Kp e la sua ora, flusso solare a 10,7 cm, numero di macchie (SWPC) del giorno indicato,
 ultimo brillamento (classe e ora del massimo).
