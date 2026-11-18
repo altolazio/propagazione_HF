@@ -11,12 +11,14 @@
 //   wspr_spot.csv    tutti gli spot WSPR tra stazioni italiane (grezzi)
 //   cluster_spot.csv spot SSB del DX cluster
 //   meteo_spazio.csv Kp, flusso solare, numero di Wolf, ultimo brillamento
+//   rete_ore.csv     rete WSPR della Sezione: per ogni ora, banda e coppia, sentito sì/no (solo se rete/rete.csv ha stazioni attive)
 //   registro.csv     buchi e problemi (ionosonda ferma, servizi non raggiungibili)
 // Il calcolo della previsione usa il codice del modello preso da index.html, così è identico a quello della pagina.
 
 import { readFile, writeFile, appendFile, mkdir, access } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import vm from 'node:vm';
+import { leggiRete, elaboraRete, INTESTAZIONE_RETE } from './rete.mjs';
 
 const DIR = process.argv[2] || 'archivio';
 const DATA = process.env.OUT_DIR || 'data';
@@ -137,6 +139,9 @@ if (fino > da) {
     }
     await aggiungiPerMese('wspr_ore.csv', ['ora_utc', 'banda', 'percorsi', 'percorsi_da_ssb', 'km_max', 'snr_max_100w_db'],
       [...agg.values()].map(g => [iso(g.h), BANDE_W[g.b], g.n, g.ok, g.km || '', g.best ?? '']));
+    // rete WSPR della Sezione (rete/rete.csv): chi ha sentito chi, e chi NON ha sentito chi
+    const rete = await leggiRete();
+    if (rete.length) await aggiungiPerMese('rete_ore.csv', INTESTAZIONE_RETE, elaboraRete(rete, righe, da, fino, BANDE_W));
     if (righe.length >= 100000) nota('wspr', 'raggiunto il limite di 100000 spot: alcune ore potrebbero essere incomplete');
     stato.wsprFinoA = fino;
   } catch (e) { nota('wspr', 'wspr.live non disponibile: ' + e.message + ' (si riprova al giro successivo)'); }
