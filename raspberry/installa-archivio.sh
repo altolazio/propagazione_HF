@@ -23,6 +23,11 @@ chown "$UTENTE": "$DEST"
 
 # 2. script di aggiornamento
 install -m 755 "$(dirname "$0")/aggiorna-archivio.sh" /usr/local/bin/aggiorna-archivio.sh
+# estrazione in Excel (se lo script è presente nella stessa cartella)
+if [ -f "$(dirname "$0")/estrai-archivio.py" ]; then
+  apt-get install -y -q python3-openpyxl >/dev/null && install -m 755 "$(dirname "$0")/estrai-archivio.py" /usr/local/bin/estrai-archivio.py
+  mkdir -p "$DEST/estratti" && chown "$UTENTE": "$DEST/estratti"
+fi
 
 # 3. servizio e timer: ogni notte alle 03:15 e 10 minuti dopo ogni riaccensione;
 #    "Persistent=true" recupera l'esecuzione persa se il Raspberry era spento all'ora prevista
