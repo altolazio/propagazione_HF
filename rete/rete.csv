@@ -1,3 +1,6 @@
 nominativo,locatore,localita,zona,ruolo,bande,turno,offset_hz,potenza_dbm,antenna,coppia,attiva,dal,note
-IZ0QPO,JN61AW,Ladispoli,Roma,TX,20m,,,23,long wire,,si,2026-11-18,stazione di prova
+IZ0QPO,JN61AW,Ladispoli,Roma,TX,20m,,,23,long wire,,si,2026-11-18,stazione Amsat IT
+I0LYO,JN52WB,Civitavecchia,Roma,TX,40m,,,23,dipolo,,si,2026-11-18,stazione Amsat IT
+IU0PXR,JN61AW,Ladispoli,Roma,TX,15m,,,23,dipolo,,si,2026-11-18,stazione Amsat IT
+
 
