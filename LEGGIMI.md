@@ -69,6 +69,14 @@ banda in quell'ora (tx sentita da qualcun altro, rx che riceveva altre stazioni)
 compaiono (nessuna informazione). `snr_max_100w_db` è riportato a 100 W; `ionosonda_vicina` e `km_da_ionosonda` si
 riferiscono al punto medio del percorso (rm041 = Roma, sp044 = La Spezia, gm037d = Gibilmanna).
 
+### rete_copertura.csv – beacon della rete e ricevitori WSPRnet europei
+Per ogni beacon della rete (`rete/rete.csv`, attiva = si), ogni banda e ogni ora in cui ha certamente trasmesso
+(almeno uno spot): quanti ricevitori WSPRnet europei (quadrati IM–KP) erano attivi su quella banda in quell'ora
+(`rx_attivi_…`, cioè hanno decodificato almeno una stazione) e quanti di questi hanno sentito il beacon (`sentito_…`),
+per fasce di distanza dal beacon: 0–500, 500–1000, 1000–2000, 2000–3000 km. Il rapporto sentito/rx_attivi di una fascia
+è la probabilità che il percorso fosse aperto. `km_max_sentito` e `snr_max_100w_db` considerano tutti gli spot, anche
+oltre i 3000 km. Limite: un ricevitore che cambia banda può essere stato attivo solo per parte dell'ora.
+
 ### meteo_spazio.csv – meteo spaziale (NOAA SWPC)
 Ogni ora: ultimo indice Kp e la sua ora, flusso solare a 10,7 cm, numero di macchie (SWPC) del giorno indicato,
 ultimo brillamento (classe e ora del massimo).
