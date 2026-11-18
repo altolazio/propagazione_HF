@@ -1,0 +1,4 @@
+nominativo,locatore,localita,zona,ruolo,bande,turno,offset_hz,potenza_dbm,antenna,coppia,attiva,dal,note
+ESEMPIO1,JN62BK,Viterbo,0,TXRX,80;40;30,A,1410,23,dipolo 40 m,Viterbo-Latina,no,2026-12-01,beacon Si5351 multibanda + ricevitore
+ESEMPIO2,JN61KL,Latina,0,TX,40,B,1430,23,verticale,Viterbo-Latina,no,2026-12-01,beacon a banda singola
+ESEMPIO3,JN61GV,Roma,0,RX,80;40;30;20;17;15;12;10,,,,SDR multibanda,Aosta-Roma,no,2026-12-01,solo ricezione
