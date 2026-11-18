@@ -28,6 +28,7 @@ FOGLI = [
     ('wspr_spot', 'wspr_spot.csv', 'WSPR: tutti gli spot tra stazioni italiane'),
     ('cluster', 'cluster_spot.csv', 'Spot SSB del DX cluster'),
     ('rete', 'rete_ore.csv', 'Rete WSPR della Sezione: chi ha sentito chi (sentito = 0: non sentito)'),
+    ('copertura', 'rete_copertura.csv', 'Beacon della rete: ricevitori WSPRnet europei attivi e quanti li hanno sentiti, per distanza'),
     ('meteo_spazio', 'meteo_spazio.csv', 'Kp, flusso solare, macchie, brillamenti'),
     ('registro', 'registro.csv', 'Buchi e problemi'),
 ]
