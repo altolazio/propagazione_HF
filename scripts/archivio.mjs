@@ -18,7 +18,7 @@
 import { readFile, writeFile, appendFile, mkdir, access } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import vm from 'node:vm';
-import { leggiRete, elaboraRete, INTESTAZIONE_RETE } from './rete.mjs';
+import { leggiRete, elaboraRete, INTESTAZIONE_RETE, elaboraCopertura, INTESTAZIONE_COPERTURA, QUADRATI_EUROPA } from './rete.mjs';
 
 const DIR = process.argv[2] || 'archivio';
 const DATA = process.env.OUT_DIR || 'data';
@@ -142,6 +142,19 @@ if (fino > da) {
     // rete WSPR della Sezione (rete/rete.csv): chi ha sentito chi, e chi NON ha sentito chi
     const rete = await leggiRete();
     if (rete.length) await aggiungiPerMese('rete_ore.csv', INTESTAZIONE_RETE, elaboraRete(rete, righe, da, fino, BANDE_W));
+    if (rete.length) try {                                  // copertura: chi l'ha sentito e chi no tra i ricevitori europei
+      const sql = async s => (await (await prendi('https://db1.wspr.live/?query=' + encodeURIComponent(s.replace(/\s+/g, ' ')), 60000)).json()).data;
+      const tempo = `time >= toDateTime(${da / 1000}) AND time < toDateTime(${fino / 1000})`;
+      const nomi = rete.map(s => s.nominativo.toUpperCase().replace(/[^A-Z0-9]/g, '')).filter(Boolean).join('|');
+      const sentiti = await sql(`SELECT toUnixTimestamp(time), band, tx_sign, rx_sign, rx_loc, distance, snr, power FROM wspr.rx
+        WHERE ${tempo} AND match(tx_sign, '(^|/)(${nomi})(/|$)') LIMIT 200000 FORMAT JSONCompact`);
+      if (sentiti.length) {
+        const attivi = await sql(`SELECT toUnixTimestamp(toStartOfHour(time)) AS h, band, rx_sign, any(rx_loc) FROM wspr.rx
+          WHERE ${tempo} AND substring(rx_loc, 1, 2) IN (${QUADRATI_EUROPA.map(q => `'${q}'`).join(',')})
+          GROUP BY h, band, rx_sign LIMIT 500000 FORMAT JSONCompact`);
+        await aggiungiPerMese('rete_copertura.csv', INTESTAZIONE_COPERTURA, elaboraCopertura(rete, attivi, sentiti, BANDE_W));
+      }
+    } catch (e) { nota('wspr', 'copertura della rete non calcolata: ' + e.message); }
     if (righe.length >= 100000) nota('wspr', 'raggiunto il limite di 100000 spot: alcune ore potrebbero essere incomplete');
     stato.wsprFinoA = fino;
   } catch (e) { nota('wspr', 'wspr.live non disponibile: ' + e.message + ' (si riprova al giro successivo)'); }

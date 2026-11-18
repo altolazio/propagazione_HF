@@ -79,3 +79,46 @@ export function elaboraRete(rete, righe, da, fino, BANDE) {
 }
 export const INTESTAZIONE_RETE = ['ora_utc', 'banda', 'tx', 'rx', 'sentito', 'spot', 'snr_max_100w_db', 'distanza_km',
   'punto_medio_lat', 'punto_medio_lon', 'ionosonda_vicina', 'km_da_ionosonda'];
+
+// ---------- Copertura: i ricevitori pubblici WSPRnet come "controllo" dei beacon della rete ----------
+// I beacon commerciali trasmettono e basta: i ricevitori della Sezione sono pochi. Usiamo allora tutti i
+// ricevitori WSPRnet europei: se in quell'ora un ricevitore era attivo su quella banda (ha decodificato qualcuno)
+// e il nostro beacon ha certamente trasmesso (qualcuno l'ha sentito), sappiamo anche chi NON l'ha sentito.
+// Per non gonfiare l'archivio si scrivono solo i conteggi per fascia di distanza (una riga per beacon, banda e ora).
+export const QUADRATI_EUROPA = ['IM', 'IN', 'IO', 'JM', 'JN', 'JO', 'JP', 'KM', 'KN', 'KO', 'KP'];
+export const FASCE_KM = [[0, 500], [500, 1000], [1000, 2000], [2000, 3000]];
+export const INTESTAZIONE_COPERTURA = ['ora_utc', 'banda', 'tx',
+  ...FASCE_KM.flatMap(([a, b]) => [`rx_attivi_${a}_${b}km`, `sentito_${a}_${b}km`]), 'km_max_sentito', 'snr_max_100w_db'];
+
+// attivi = [ora(s), banda, rx, rx_loc] (ricevitori con almeno uno spot in quell'ora e banda)
+// sentiti = [t(s), banda, tx, rx, rx_loc, km, snr, potenza] (spot dei beacon della rete, ricevuti da chiunque)
+export function elaboraCopertura(rete, attivi, sentiti, BANDE) {
+  const pos = Object.fromEntries(rete.map(s => [s.nominativo.toUpperCase(), locatoreLatLon(s.locatore)]));
+  const base = c => String(c).toUpperCase().split('/').find(p => p in pos) || null;
+  const chi = new Map();                                   // ora|banda|tx -> { rx: Set, km, best }
+  for (const [t, b, tx, rx, , d, snr, p] of sentiti) {
+    const T = base(tx); if (!T) continue;
+    const k = `${Math.floor(+t / 3600) * 3600}|${b}|${T}`;
+    const g = chi.get(k) || { rx: new Set(), km: 0, best: null };
+    g.rx.add(String(rx).toUpperCase()); g.km = Math.max(g.km, +d);
+    const s = +snr + 50 - +p; g.best = g.best == null ? s : Math.max(g.best, s); chi.set(k, g);
+  }
+  const perOra = new Map();                                // ora|banda -> [[rx, [lat,lon]]]
+  for (const [h, b, rx, rl] of attivi) {
+    const ll = locatoreLatLon(rl); if (!ll) continue;
+    const k = `${h}|${b}`; (perOra.get(k) || perOra.set(k, []).get(k)).push([String(rx).toUpperCase(), ll]);
+  }
+  const out = [];
+  for (const [k, g] of [...chi].sort()) {
+    const [h, b, T] = k.split('|'); const pt = pos[T]; if (!pt) continue;
+    const n = FASCE_KM.map(() => [0, 0]);
+    for (const [rx, ll] of perOra.get(`${h}|${b}`) || []) {
+      if (base(rx) === T) continue;
+      const d = km(pt, ll), i = FASCE_KM.findIndex(([a, z]) => d >= a && d < z);
+      if (i < 0) continue;
+      n[i][0]++; if (g.rx.has(rx)) n[i][1]++;
+    }
+    out.push([new Date(+h * 1000).toISOString().slice(0, 19) + 'Z', BANDE[b] || b, T, ...n.flat(), g.km || '', g.best ?? '']);
+  }
+  return out;
+}
