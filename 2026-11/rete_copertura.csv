@@ -1,0 +1,5 @@
+ora_utc,banda,tx,rx_attivi_0_500km,sentito_0_500km,rx_attivi_500_1000km,sentito_500_1000km,rx_attivi_1000_2000km,sentito_1000_2000km,rx_attivi_2000_3000km,sentito_2000_3000km,km_max_sentito,snr_max_100w_db
+2026-11-18T10:00:00Z,20 m,IZ0QPO,11,0,102,35,231,68,28,1,2814,27
+2026-11-18T10:00:00Z,17 m,IZ0QPO,7,0,65,0,117,1,16,0,1471,3
+2026-11-18T11:00:00Z,20 m,IZ0QPO,11,2,102,72,236,118,26,7,2814,34
+2026-11-18T11:00:00Z,17 m,IZ0QPO,8,0,65,0,112,1,16,0,1471,9
