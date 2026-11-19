@@ -48,10 +48,20 @@ def numero(v):
     except ValueError:
         return v
 
+def leggi_data(t):
+    """Accetta 2026-11-19, 2026.11.19, 2026/11/19 e anche 19-11-2026, 19.11.2026, 19/11/2026."""
+    import re
+    n = re.split(r'[-./ ]+', t.strip())
+    try:
+        if len(n) == 3 and len(n[0]) == 4: return datetime(int(n[0]), int(n[1]), int(n[2])).date()
+        if len(n) == 3 and len(n[2]) == 4: return datetime(int(n[2]), int(n[1]), int(n[0])).date()
+    except ValueError: pass
+    sys.exit(f'Data non valida: {t!r}. Scrivila come 2026-11-19 (oppure 19/11/2026).')
+
 def main():
     a = sys.argv[1:]
     oggi = datetime.now(ROMA).date()
-    giorno = datetime.strptime(a[0], '%Y-%m-%d').date() if a else oggi
+    giorno = leggi_data(a[0]) if a else oggi
     h_da = int(a[1]) if len(a) > 1 else 0
     h_a = int(a[2]) if len(a) > 2 else 6
     inizio = datetime(giorno.year, giorno.month, giorno.day, tzinfo=ROMA) + timedelta(hours=h_da)
