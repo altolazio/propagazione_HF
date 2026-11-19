@@ -76,6 +76,8 @@ Per ogni beacon della rete (`rete/rete.csv`, attiva = si), ogni banda e ogni ora
 per fasce di distanza dal beacon: 0–500, 500–1000, 1000–2000, 2000–3000 km. Il rapporto sentito/rx_attivi di una fascia
 è la probabilità che il percorso fosse aperto. `km_max_sentito` e `snr_max_100w_db` considerano tutti gli spot, anche
 oltre i 3000 km. Limite: un ricevitore che cambia banda può essere stato attivo solo per parte dell'ora.
+Dal 19/11/2026 si contano solo le bande dichiarate nella colonna `bande` di `rete.csv` (se vuota, tutte): gli spot
+su altre bande vengono quasi sempre da un ricevitore lontano con la banda impostata male.
 
 ### meteo_spazio.csv – meteo spaziale (NOAA SWPC)
 Ogni ora: ultimo indice Kp e la sua ora, flusso solare a 10,7 cm, numero di macchie (SWPC) del giorno indicato,
