@@ -7,3 +7,4 @@ La colonna `versione_modello` di previsioni.csv e bande.csv cambia da sola quand
 |---|---|---|
 | 2026-11-14 | Inizio dell'archivio storico orario. Modello: mediana INGV a 27 giorni + scarto attuale che si attenua con costante τ, τ e fascia di incertezza ritarati sugli ultimi 4 giorni. MUF per distanza: legge della secante calibrata su foF2 e MUF(3000). Banda aperta sotto l'85% della MUF. | Verificare il modello nel tempo |
 | 2026-11-18 | Nuovo file rete_copertura.csv (beacon della rete sentiti o no dai ricevitori WSPRnet europei, per fasce di distanza). Non cambia il modello. | Rete WSPR fatta soprattutto di beacon commerciali che solo trasmettono |
+| 2026-11-19 | rete_copertura.csv conta solo le bande dichiarate in rete.csv. Non cambia il modello. | Spot di I0LYO (beacon 40 m) su 15/20/30 m da un solo ricevitore a 7300–7500 km con la banda sbagliata |
