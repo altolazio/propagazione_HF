@@ -95,9 +95,14 @@ export const INTESTAZIONE_COPERTURA = ['ora_utc', 'banda', 'tx',
 export function elaboraCopertura(rete, attivi, sentiti, BANDE) {
   const pos = Object.fromEntries(rete.map(s => [s.nominativo.toUpperCase(), locatoreLatLon(s.locatore)]));
   const base = c => String(c).toUpperCase().split('/').find(p => p in pos) || null;
+  // Bande dichiarate (es. "40m;20m"): gli spot su altre bande sono quasi sempre ricevitori con la banda impostata male.
+  const norm = t => String(t).toLowerCase().replace(/\s+/g, '').replace(/mt$/, 'm');
+  const bandeDi = Object.fromEntries(rete.map(s => [s.nominativo.toUpperCase(),
+    (s.bande || '').split(';').map(norm).filter(Boolean)]).map(([k, v]) => [k, v.length ? new Set(v) : null]));
   const chi = new Map();                                   // ora|banda|tx -> { rx: Set, km, best }
   for (const [t, b, tx, rx, , d, snr, p] of sentiti) {
     const T = base(tx); if (!T) continue;
+    const ok = bandeDi[T]; if (ok && !ok.has(norm(BANDE[b] || b))) continue;   // solo le bande dichiarate in rete.csv
     const k = `${Math.floor(+t / 3600) * 3600}|${b}|${T}`;
     const g = chi.get(k) || { rx: new Set(), km: 0, best: null };
     g.rx.add(String(rx).toUpperCase()); g.km = Math.max(g.km, +d);
