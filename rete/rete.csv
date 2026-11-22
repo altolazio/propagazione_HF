@@ -1,6 +1,5 @@
 nominativo,locatore,localita,zona,ruolo,bande,turno,offset_hz,potenza_dbm,antenna,coppia,attiva,dal,note
-IZ0QPO,JN61AW,Ladispoli,Roma,TX,20m,,,23,long wire,,si,2026-11-18,stazione Amsat IT
-I0LYO,JN52WB,Civitavecchia,Roma,TX,40m,,,23,dipolo,,si,2026-11-18,stazione Amsat IT
+IZ0QPO,JN61AW,Ladispoli,Roma,TX,20m,,,23,long wire,,no,2026-11-18,beacon spento dal 21/11: antenna usata dal ricevitore IQ0HL
+I0LYO,JN52VB,Civitavecchia,Roma,TX,40m,,,23,dipolo,,si,2026-11-18,stazione Amsat IT
 IU0PXR,JN61AW,Ladispoli,Roma,TX,15m,,,23,dipolo,,si,2026-11-18,stazione Amsat IT
-
-
+IQ0HL,JN61AW,Ladispoli,Roma,RX,80m;40m;30m;20m;17m;15m;10m,,,,long wire,,si,2026-11-21,ricevitore RTL-SDR V3 sul Raspberry della Sezione
