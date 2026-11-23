@@ -303,7 +303,7 @@ function elevSole(lat, lon, t) {   // altezza del Sole in gradi (formula semplif
   const ha = rad((d.getUTCHours() + d.getUTCMinutes() / 60 + lon / 15 - 12) * 15);
   return deg(Math.asin(Math.sin(rad(lat)) * Math.sin(rad(decl)) + Math.cos(rad(lat)) * Math.cos(rad(decl)) * Math.cos(ha)));
 }
-const SSB_BANDE = BANDE.filter(([n, f]) => f < 30 && n !== '30 m' && n !== '160 m');
+const SSB_BANDE = BANDE.filter(([n, f]) => f < 30 && n !== '30 m');   // bande HF con fonia, 160 m compresi (30 m: niente fonia)
 let prevCache = null, prevT = 0;
 function prevStazioni() {
   if (typeof window.IONO_PREV !== 'function') return null;
