@@ -2,9 +2,11 @@
    Banda consigliata tra due province – Progetto di previsione della propagazione HF
    Sezione A.R.I. Alto Lazio
    File separato: aggiunge nella barra in alto il pulsante "Banda tra due province"
-   e una finestra che, dai DATI REALI PIÙ RECENTI delle ionosonde INGV (nessuna previsione),
-   suggerisce la banda HF più adatta per un collegamento in SSB tra due capoluoghi di provincia,
-   e mostra gli spot in fonia dell'ultima ora letti dal DX cluster (file data/cluster.json).
+   e una finestra che, dai DATI REALI PIÙ RECENTI delle ionosonde INGV, suggerisce la banda HF più adatta
+   per un collegamento in SSB tra due capoluoghi di provincia, e mostra gli spot in fonia dell'ultima ora
+   (DX cluster, data/cluster.json) e i percorsi WSPR. Dal 23/11/2026 anche: mappa del collegamento,
+   previsione delle prossime 24 ore per la tratta (dalla previsione della pagina, window.IONO_PREV) e
+   zona di silenzio e copertura dalla provincia dell'utente. Mappe disegnate qui, senza servizi esterni.
    Per toglierlo basta eliminare la riga <script src="collegamento.js"> da index.html.
    ===================================================================== */
 (() => {
@@ -198,8 +200,7 @@ async function leggiCluster() {
   } catch { return null; }
 }
 function boxCluster(c, banda, A, B) {
-  const fonte = c && c.nodo ? `${esc(c.nodo)}${c.nome ? ' (' + esc(c.nome) + ')' : ''}` : 'IQ1LA-6 (ARI Loano)';
-  const nota = `<p class="cg-small" style="margin:6px 0 0">Spot in <b>fonia (SSB)</b> dell’ultima ora dal DX cluster ${fonte}: esclusi CW e modi digitali (FT8, FT4, RTTY…). La call area è dedotta dal nominativo; uno spot non è un QSO, il dato è solo indicativo.</p>`;
+  const nota = `<p class="cg-small" style="margin:6px 0 0">Solo <b>fonia</b>${c && c.agg ? `, ultimo aggiornamento del cluster <b>${hhmm(c.agg)}</b>` : ''}; call area dedotta dal nominativo. Uno spot non è un QSO: indicativo.</p>`;
   const tit = '<b>Attività SSB dal DX cluster – ultima ora</b>';
   if (!c || !Array.isArray(c.spot)) return `<div class="cg-cl">${tit}<p class="cg-small" style="margin:4px 0">Dati del cluster non disponibili in questo momento.</p>${nota}</div>`;
   const ora = Date.now(), sp = c.spot.filter(s => s.t >= ora - UN_ORA && s.t <= ora + 5 * 60e3);
@@ -217,7 +218,7 @@ function boxCluster(c, banda, A, B) {
   const perB = {}; for (const s of sp) if (s.b !== banda) perB[s.b] = (perB[s.b] || 0) + 1;
   const altre = BANDE.map(b => b[0]).filter(n => perB[n]).map(n => `${n} (${perB[n]})`).join(', ');
   righe.push(`<li>${banda ? 'Altre bande' : 'Bande'} con spot SSB italiani: ${altre || 'nessuna'}.</li>`);
-  const vecchio = ora - c.agg > 45 * 60e3 ? `<p class="cg-small cg-err" style="margin:4px 0">Ultimo aggiornamento del cluster alle ${hhmm(c.agg)}: dati non recenti.</p>` : '';
+  const vecchio = ora - c.agg > 45 * 60e3 ? `<p class="cg-small cg-err" style="margin:4px 0">Dati del cluster non recenti.</p>` : '';
   return `<div class="cg-cl">${tit}<ul>${righe.join('')}</ul>${vecchio}${nota}</div>`;
 }
 
@@ -236,7 +237,7 @@ async function leggiWspr() {
   wsprCT = Date.now(); return wsprC;
 }
 function boxWspr(w, banda, mid, D0) {
-  const tit = '<b>Percorsi WSPR tra stazioni italiane – ultima ora</b>';
+  const tit = '<b>Percorsi WSPR italiani – ultima ora</b>';
   if (!banda) return '';
   if (!w || !Array.isArray(w.ult)) return `<div class="cg-cl">${tit}<p class="cg-small" style="margin:4px 0">Dati WSPR non disponibili in questo momento.</p></div>`;
   const L = w.ult.filter(x => x[1] === banda && x[0] >= Date.now() - UN_ORA), ok = L.filter(x => x[5] >= 10).length;
@@ -247,7 +248,133 @@ function boxWspr(w, banda, mid, D0) {
     simile = ` – il più simile al vostro: ${esc(m[2])} → ${esc(m[3])}, ${m[4]} km, ${m[5] > 0 ? '+' : ''}${m[5]} dB alle ${hhmm(m[0])}`;
   }
   return `<div class="cg-cl">${tit}<ul><li>Su <b>${banda}</b>: <b>${L.length}</b> spot, di cui <b>${ok}</b> con segnale sufficiente per SSB${simile}.</li></ul>` +
-    '<p class="cg-small" style="margin:4px 0 0">Dato <b>digitale</b>: stazioni WSPR automatiche a bassa potenza (fonte wspr.live). Il segnale è riportato a 100 W: con almeno +10 dB su 2,5 kHz un QSO in fonia è normalmente possibile. Solo indicativo.</p></div>';
+    '<p class="cg-small" style="margin:4px 0 0">Stazioni automatiche a bassa potenza (wspr.live), segnale riportato a 100 W: da +10 dB su 2,5 kHz la fonia è normalmente possibile. Indicativo.</p></div>';
+}
+
+/* ---------- mappe (disegnate qui, senza servizi esterni) ---------- */
+// contorno semplificato dell'Italia [lon, lat]
+const IT = [[7.53,43.78],[8.2,43.9],[8.9,44.4],[9.8,44.07],[10.25,43.55],[10.5,42.95],[11.1,42.4],[11.8,42.05],[12.25,41.73],[12.62,41.45],[13.05,41.23],[13.6,41.2],[14.0,40.9],[14.25,40.8],[14.4,40.6],[14.98,40.25],[15.0,40.05],[15.6,40.0],[15.8,39.6],[16.05,39.1],[15.65,38.25],[15.64,38.0],[16.05,37.93],[16.55,38.4],[17.15,38.9],[17.1,39.25],[16.6,39.6],[16.5,40.1],[17.2,40.45],[17.98,40.05],[18.37,39.8],[18.5,40.15],[17.95,40.65],[16.87,41.12],[16.0,41.45],[15.9,41.65],[16.2,41.9],[15.9,41.95],[14.98,42.0],[14.2,42.47],[13.9,42.9],[13.6,43.55],[12.6,44.0],[12.25,44.4],[12.3,45.2],[12.6,45.5],[13.1,45.65],[13.75,45.65],[13.7,46.5],[12.4,46.7],[11.0,46.8],[10.45,46.5],[9.3,46.5],[8.4,46.4],[7.0,45.9],[6.8,45.1],[7.0,44.2]];
+const SIC = [[12.4,37.8],[12.7,38.15],[13.35,38.2],[14.0,38.03],[15.1,38.15],[15.65,38.27],[15.09,37.5],[15.29,37.07],[15.1,36.65],[14.25,37.06],[13.58,37.3],[12.6,37.6]];
+const SAR = [[9.2,41.25],[9.6,41.0],[9.7,40.3],[9.6,39.5],[9.55,39.15],[9.11,39.21],[8.6,38.9],[8.4,39.0],[8.5,39.9],[8.4,40.4],[8.3,40.56],[8.22,40.95],[8.4,40.84]];
+const COR = [[9.4,43.0],[9.55,42.6],[9.4,41.9],[9.25,41.4],[8.8,41.6],[8.6,42.1],[8.65,42.5],[9.0,42.75]];
+const MW = 300, MK = MW / ((19.2 - 6.2) * Math.cos(rad(42))), MH = Math.round((47.3 - 36.3) * MK);
+const P = (lat, lon) => [((lon - 6.2) * MK * Math.cos(rad(42))).toFixed(1), ((47.3 - lat) * MK).toFixed(1)];
+const poly = (pts, attr) => `<polygon points="${pts.map(([lo, la]) => P(la, lo).join(',')).join(' ')}" ${attr}/>`;
+const terra = () => poly(COR, 'fill="var(--closed,#c9ced6)" opacity=".35"') +
+  [IT, SIC, SAR].map(p => poly(p, 'fill="var(--closed,#c9ced6)" opacity=".55" stroke="var(--mute,#5f6b78)" stroke-width=".6"')).join('');
+function cerchio(c, km) {   // cerchio di raggio km attorno a c=[lat,lon], come poligono [lon,lat]
+  const out = [], d = km / RE, la = rad(c[0]), lo = rad(c[1]);
+  for (let i = 0; i <= 360; i += 6) {
+    const b = rad(i), la2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(b));
+    out.push([deg(lo + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(la), Math.cos(d) - Math.sin(la) * Math.sin(la2))), deg(la2)]);
+  }
+  return out;
+}
+const IONO_PT = [['Roma', 41.80, 12.50], ['La Spezia', 44.10, 9.79], ['Gibilmanna', 37.90, 14.00]];
+function mappaCollegamento(a, b, mid, vicina) {
+  const [x1, y1] = P(a[2], a[3]), [x2, y2] = P(b[2], b[3]), [xm, ym] = P(mid[0], mid[1]);
+  let s = `<svg class="cg-map" viewBox="0 0 ${MW} ${MH}" role="img" aria-label="Mappa del collegamento">${terra()}`;
+  const iv = IONO_PT.find(i => i[0] === vicina);
+  if (iv) { const [xi, yi] = P(iv[1], iv[2]); s += `<line x1="${xm}" y1="${ym}" x2="${xi}" y2="${yi}" stroke="var(--marg,#d9a400)" stroke-width="1.4" stroke-dasharray="4 3"/>`; }
+  s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--foF2,#2f6fdc)" stroke-width="2.6"/>`;
+  for (const [n, la, lo] of IONO_PT) { const [x, y] = P(la, lo), on = n === vicina;
+    s += `<rect x="${x - 4.5}" y="${y - 4.5}" width="9" height="9" fill="${on ? 'var(--marg,#d9a400)' : 'var(--med,#8a96a3)'}" transform="rotate(45 ${x} ${y})"/><text x="${+x + 8}" y="${+y + 4}" font-size="10" fill="${on ? 'var(--marg,#d9a400)' : 'var(--mute,#5f6b78)'}">${n}</text>`; }
+  for (const [p, x, y] of [[a, x1, y1], [b, x2, y2]]) s += `<circle cx="${x}" cy="${y}" r="5" fill="var(--foF2,#2f6fdc)" stroke="#fff" stroke-width="1.5"/><text x="${+x + 8}" y="${+y - 6}" font-size="11" font-weight="700" fill="var(--ink,#1b1f24)">${esc(p[1])} (${p[0]})</text>`;
+  return s + `<circle cx="${xm}" cy="${ym}" r="4.5" fill="#fff" stroke="var(--foF2,#2f6fdc)" stroke-width="2"/></svg>`;
+}
+function mappaZona(a, b, z) {
+  let s = `<svg class="cg-map" viewBox="0 0 ${MW} ${MH}" role="img" aria-label="Zona di silenzio e copertura"><defs><pattern id="cg-hz" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="var(--mute,#5f6b78)" stroke-width="1.3"/></pattern><clipPath id="cg-cl"><rect width="${MW}" height="${MH}"/></clipPath></defs><g clip-path="url(#cg-cl)">`;
+  const c = [a[2], a[3]];
+  if (z.chiusa) s += terra();
+  else {
+    s += poly(cerchio(c, z.fuori), 'fill="var(--open,#1f9d55)" fill-opacity=".22" stroke="var(--open,#1f9d55)" stroke-width="1.4"') + terra();
+    if (z.salto > 0) s += poly(cerchio(c, z.salto), 'fill="url(#cg-hz)" stroke="var(--mute,#5f6b78)" stroke-width="1.4" stroke-dasharray="5 3"');
+  }
+  const [xa, ya] = P(a[2], a[3]), [xb, yb] = P(b[2], b[3]);
+  s += `</g><circle cx="${xa}" cy="${ya}" r="5" fill="var(--foF2,#2f6fdc)" stroke="#fff" stroke-width="1.5"/><text x="${+xa + 7}" y="${+ya + 15}" font-size="11" font-weight="700" fill="var(--ink,#1b1f24)">${a[0]}</text>`;
+  if (b[0] !== a[0]) s += `<circle cx="${xb}" cy="${yb}" r="4.5" fill="var(--marg,#d9a400)" stroke="#fff" stroke-width="1.2"/><text x="${+xb + 7}" y="${+yb - 5}" font-size="10" font-weight="700" fill="var(--ink,#1b1f24)">${b[0]}</text>`;
+  return s + '</svg>';
+}
+
+/* ---------- previsione delle prossime 24 ore per la tratta (dalla previsione della pagina) ---------- */
+function elevSole(lat, lon, t) {   // altezza del Sole in gradi (formula semplificata)
+  const d = new Date(t), g = (t - Date.UTC(d.getUTCFullYear(), 0, 1)) / 864e5;
+  const decl = -23.44 * Math.cos(rad(360 / 365 * (g + 10)));
+  const ha = rad((d.getUTCHours() + d.getUTCMinutes() / 60 + lon / 15 - 12) * 15);
+  return deg(Math.asin(Math.sin(rad(lat)) * Math.sin(rad(decl)) + Math.cos(rad(lat)) * Math.cos(rad(decl)) * Math.cos(ha)));
+}
+const SSB_BANDE = BANDE.filter(([n, f]) => f < 30 && n !== '30 m' && n !== '160 m');
+let prevCache = null, prevT = 0;
+function prevStazioni() {
+  if (typeof window.IONO_PREV !== 'function') return null;
+  if (!prevCache || Date.now() - prevT > 10 * 60e3) { try { prevCache = window.IONO_PREV(); prevT = Date.now(); } catch (e) { prevCache = null; } }
+  return prevCache;
+}
+function ionoAlle(T, pos, dati, prev) {   // ionosfera stimata nel punto pos all'istante T
+  let d = dati;
+  if (T > Date.now() + 20 * 60e3) {
+    if (!prev) return null;
+    d = {};
+    for (const st of Object.keys(STAZ)) {
+      const pts = prev[st] || []; let best = null;
+      for (const p of pts) if (!best || Math.abs(p.t - T) < Math.abs(best.t - T)) best = p;
+      d[st] = best && Math.abs(best.t - T) < 45 * 60e3 && best.fof2 ? { t: best.t, fof2: best.fof2, muf: best.muf, m: best.m, hmf2: best.hmf2 } : null;
+    }
+  }
+  const s = stimaNelPunto(pos, d); if (!s || !s.fof2) return null;
+  if (T > Date.now() + 20 * 60e3) s.foe = elevSole(pos[0], pos[1], T) > 10 ? 2.5 : null;   // giorno/notte per l'assorbimento
+  return s;
+}
+function prossime24(r, dati) {
+  const prev = prevStazioni(), t0 = Math.floor(Date.now() / H) * H, ore = [];
+  for (let k = 0; k < 24; k++) {
+    const T = k ? t0 + k * H + H / 2 : Date.now(), s = ionoAlle(T, r.mid, dati, prev);
+    if (!s) { ore.push({ T, st: null }); continue; }
+    const muf = mufAt(r.D, s);
+    ore.push({ T, st: Object.fromEntries(SSB_BANDE.map(([n, f]) => [n, stato(f, r.D, s, muf, null)])) });
+  }
+  return ore;
+}
+const ORDINE = SSB_BANDE.map(b => b[0]);   // dalla più bassa alla più alta
+function striscia(ore) {
+  const cw = 19, rh = 16, lx = 46, bande = [...ORDINE].reverse(), W = lx + 24 * cw, Hh = 22 + rh * bande.length + 16;
+  const COL = { open: 'var(--open,#1f9d55)', marg: 'var(--marg,#d9a400)', abs: 'var(--abs,#e07b39)', closed: 'var(--closed,#c9ced6)', es: 'var(--es,#8a4fd8)' };
+  let s = `<svg class="cg-strip" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Bande nelle prossime 24 ore"><text x="0" y="14" font-size="9" fill="var(--mute,#5f6b78)">migliore</text>`;
+  ore.forEach((o, k) => {
+    const x = lx + k * cw;
+    if (o.st) {
+      const ap = ORDINE.filter(n => o.st[n] === 'open'), mg = ORDINE.filter(n => o.st[n] === 'marg');
+      const m = ap.length ? ap[ap.length - 1] : mg.length ? mg[mg.length - 1] : '–';
+      s += `<text x="${x + cw / 2 - .5}" y="14" font-size="9" font-weight="700" text-anchor="middle" fill="${ap.length ? 'var(--ink,#1b1f24)' : 'var(--mute,#5f6b78)'}">${m.replace(' m', '')}</text>`;
+    }
+    bande.forEach((n, i) => { const st = o.st ? o.st[n] : null;
+      s += `<rect x="${x + 1}" y="${20 + i * rh + 1}" width="${cw - 2}" height="${rh - 2}" rx="2" fill="${st ? COL[st] : 'none'}" stroke="${st ? 'none' : 'var(--line,#dde2e8)'}"><title>${hhmm(o.T)} – ${n}: ${st ? TXT[st] : 'nessun dato'}</title></rect>`; });
+    const h = +new Date(o.T).toLocaleString('it-IT', { hour: '2-digit', hour12: false, timeZone: 'Europe/Rome' });
+    if (k === 0 || h % 3 === 0) s += `<text x="${x + 1}" y="${20 + bande.length * rh + 12}" font-size="9" fill="var(--mute,#5f6b78)">${k === 0 ? 'ora' : String(h).padStart(2, '0')}</text>`;
+  });
+  bande.forEach((n, i) => s += `<text x="0" y="${20 + i * rh + 11}" font-size="10" fill="var(--mute,#5f6b78)">${n}</text>`);
+  return s + `<rect x="${lx}" y="18" width="${cw}" height="${bande.length * rh + 4}" fill="none" stroke="var(--ink,#1b1f24)" stroke-width="1.6" rx="3"/></svg>`;
+}
+function sintesi(ore) {   // es. "40 m dalle 7 alle 18; 80 m dalle 19 alle 6"
+  const migl = ore.map(o => { if (!o.st) return null; const ap = ORDINE.filter(n => o.st[n] === 'open'); return ap.length ? ap[ap.length - 1] : null; });
+  const out = []; let i = 0;
+  while (i < migl.length) { let j = i; while (j + 1 < migl.length && migl[j + 1] === migl[i]) j++;
+    const ora = k => +new Date(ore[k].T).toLocaleString('it-IT', { hour: '2-digit', hour12: false, timeZone: 'Europe/Rome' });
+    if (migl[i]) out.push(`<b>${migl[i]}</b> ${i === 0 ? 'da adesso' : 'dalle ' + ora(i)} ${j === migl.length - 1 ? 'in poi' : 'alle ' + ((ora(j) + 1) % 24)}`);
+    i = j + 1; }
+  return out.length ? out.join('; ') + '.' : 'nessuna banda pienamente aperta nelle prossime 24 ore.';
+}
+
+/* ---------- zona di silenzio e copertura dalla provincia dell'utente ---------- */
+function zona(f, s) {
+  const hv = Math.max((s.hmf2 || hmFromM(s.m)) + 40, 240), fuori = hopMax(hv) * 0.97, day = s.foe != null && s.foe >= 1.8;
+  if (day && f <= 2.0) return { chiusa: true, assorbita: true };
+  let salto = null;
+  for (let D = 0; D <= fuori; D += 10) if (f <= mufAt(Math.max(D, 30), s)) { salto = D; break; }
+  if (salto == null) return { chiusa: true };
+  const lim = day && f <= 4 ? Math.min(fuori, 500) : fuori;
+  if (salto >= lim) return { chiusa: true, assorbita: day && f <= 4 };
+  return { salto, fuori: lim, assorbita: day && f <= 4 };
 }
 
 /* ---------- interfaccia ---------- */
@@ -256,13 +383,13 @@ const CSS = `
 .cg-btn:hover{filter:brightness(1.1)}
 .cg-back{position:fixed;inset:0;background:rgba(0,10,30,.45);z-index:900;display:none}
 .cg-back.on{display:block}
-.cg-pop{position:absolute;z-index:901;left:50%;transform:translateX(-50%);width:min(620px,calc(100% - 24px));max-height:none;background:var(--card,#fff);color:var(--ink,#1b1f24);border:1px solid var(--line,#dde2e8);border-radius:14px;box-shadow:0 18px 50px rgba(0,20,60,.35);padding:16px 18px 14px;display:none;box-sizing:border-box}
+.cg-pop{position:absolute;z-index:901;left:50%;transform:translateX(-50%);width:min(680px,calc(100% - 24px));max-height:none;background:var(--card,#fff);color:var(--ink,#1b1f24);border:1px solid var(--line,#dde2e8);border-radius:14px;box-shadow:0 18px 50px rgba(0,20,60,.35);padding:16px 18px 14px;display:none;box-sizing:border-box}
 .cg-pop.on{display:block}
 .cg-pop h2{margin:0 36px 4px 0;font-size:18px}
 .cg-pop .cg-x{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:17px;border:1px solid var(--line,#dde2e8);background:var(--card,#fff);color:var(--ink,#1b1f24);font-size:18px;cursor:pointer}
 .cg-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:10px 0}
 .cg-row label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--mute,#5f6b78)}
-.cg-row select{font:inherit;font-size:15px;width:220px;max-width:100%;padding:7px 9px;border-radius:8px;border:1px solid var(--line,#dde2e8);background:var(--bg,#f6f7f9);color:var(--ink,#1b1f24)}
+.cg-row select{font:inherit;font-size:15px;width:190px;max-width:100%;padding:7px 9px;border-radius:8px;border:1px solid var(--line,#dde2e8);background:var(--bg,#f6f7f9);color:var(--ink,#1b1f24)}
 .cg-res{margin-top:6px;font-size:14px}
 .cg-big{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--bg,#f6f7f9);border:1px solid var(--line,#dde2e8);border-radius:12px;padding:10px 14px;margin:8px 0}
 .cg-big .cg-band{font-size:34px;font-weight:800;color:var(--open,#1f9d55);line-height:1}
@@ -278,6 +405,25 @@ const CSS = `
 .cg-cl{background:var(--bg,#f6f7f9);border:1px dashed var(--line,#dde2e8);border-radius:12px;padding:8px 12px;margin:8px 0;font-size:13px}
 .cg-cl ul{margin:4px 0;padding-left:18px}.cg-cl li{margin:2px 0}
 .cg-ssb{display:inline-block;font-size:12px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--foF2,#2f6fdc);color:#fff;margin-left:6px;vertical-align:middle}
+
+.cg-verdi{display:flex;flex-direction:column;gap:4px;margin-left:auto;align-items:flex-end}
+.cg-verdi .cg-chip{white-space:nowrap}
+.cg-sec{border-top:1px solid var(--line,#dde2e8);margin-top:12px;padding-top:8px}
+.cg-sec h3{margin:0 0 6px;font-size:15px}
+.cg-two{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.cg-mapbox{flex:0 0 280px;max-width:100%}
+.cg-map{width:100%;height:auto;display:block;background:var(--bg,#f6f7f9);border-radius:10px}
+.cg-col{flex:1;min-width:240px;font-size:13px}
+.cg-col .cg-cl{margin:6px 0}
+.cg-strip{display:block;min-width:500px;width:100%;height:auto}
+.cg-leg{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--mute,#5f6b78);margin-top:4px}
+.cg-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.cg-zb{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0}
+.cg-zb button{font:inherit;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;border:1px solid var(--line,#dde2e8);background:var(--bg,#f6f7f9);color:var(--mute,#5f6b78);cursor:pointer}
+.cg-zb button.on{background:var(--foF2,#2f6fdc);border-color:var(--foF2,#2f6fdc);color:#fff}
+.cg-sl{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mute,#5f6b78);margin:6px 0 8px}
+.cg-sl input{flex:1}
+.cg-ok{color:var(--open,#1f9d55);font-weight:700}
 `;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 const f1 = v => v == null ? '–' : v.toFixed(1).replace('.', ',');
@@ -296,7 +442,7 @@ function mount() {
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
   const bar = document.querySelector('.bar'); if (!bar) return;
   const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'cg-btn';
-  btn.textContent = 'Calcolatore QSO'; btn.title = 'Calcolatore per QSO in tempo reale: banda consigliata tra due province'; btn.setAttribute('aria-haspopup', 'dialog');
+  btn.textContent = 'Calcolatore QSO'; btn.title = 'Calcolatore per QSO in tempo reale (previsione): banda consigliata tra due province'; btn.setAttribute('aria-haspopup', 'dialog');
   const reload = document.getElementById('reload');
   reload && reload.nextSibling ? bar.insertBefore(btn, reload.nextSibling) : bar.appendChild(btn);
 
@@ -305,17 +451,18 @@ function mount() {
   const pop = document.createElement('div'); pop.className = 'cg-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-modal', 'true'); pop.setAttribute('aria-labelledby', 'cg-tit');
   pop.innerHTML = `
     <button type="button" class="cg-x" aria-label="Chiudi">✕</button>
-    <h2 id="cg-tit">Calcolatore per QSO in tempo reale <span class="cg-ssb">SSB</span></h2>
-    <p class="cg-small" style="margin:0">Banda consigliata per un collegamento tra due province, in base agli <b>ultimi dati reali</b> delle ionosonde INGV (nessuna previsione). <b>Il risultato è rivolto al collegamento in SSB (fonia).</b> Scegliere le due province dai menu (con il menu aperto si può digitare la sigla per trovarla subito).</p>
+    <h2 id="cg-tit">Calcolatore per QSO in tempo reale (previsione) <span class="cg-ssb">SSB</span></h2>
+    <p class="cg-small" style="margin:0">Banda consigliata per un collegamento tra due province, in base agli <b>ultimi dati reali</b> delle ionosonde INGV; le prossime 24 ore e la zona di silenzio sono una previsione calcolata dagli stessi dati. <b>Il risultato è rivolto al collegamento in SSB (fonia).</b> Scegliere le due province dai menu (con il menu aperto si può digitare la sigla per trovarla subito).</p>
     <form class="cg-row">
       <label>La tua provincia<select id="cg-a" required>${opts}</select></label>
       <label>Provincia del corrispondente<select id="cg-b" required>${opts}</select></label>
       <button type="submit" class="cg-btn" style="padding:8px 14px">Calcola</button>
+      <div class="cg-verdi" aria-label="Bande aperte adesso"></div>
     </form>
     <div class="cg-res" aria-live="polite"></div>
     <div style="display:flex;justify-content:flex-end;margin-top:10px"><button type="button" class="cg-close">Chiudi</button></div>`;
   document.body.appendChild(back); document.body.appendChild(pop);
-  const res = pop.querySelector('.cg-res'), ia = pop.querySelector('#cg-a'), ib = pop.querySelector('#cg-b');
+  const res = pop.querySelector('.cg-res'), ia = pop.querySelector('#cg-a'), ib = pop.querySelector('#cg-b'), verdi = pop.querySelector('.cg-verdi');
 
   const open = () => {
     // posizione vicino al pulsante: funziona anche quando la pagina è dentro un riquadro alto e fisso (sito della sezione)
@@ -350,17 +497,56 @@ function mount() {
     } else {
       big = `<div><div class="cg-small">Risultato</div><div class="cg-band none">Nessuna banda HF utile adesso</div></div>`;
     }
+    const vicina = r.s.pesi[0] ? r.s.pesi[0][0] : null;
+    const dIono = vicina ? Math.min(...IONO_PT.filter(i => i[0] === vicina).map(i => distanza([0, ...r.mid], [0, i[1], i[2]]))) : null;
+    const aff = dIono == null ? '' : dIono <= 300 ? '<span class="cg-ok">stima affidabile</span>' : dIono <= 600 ? '<b>stima indicativa</b>' : '<span class="cg-err">stima incerta</span>';
+    const vicinoA = Object.entries(PROV).reduce((m, [k, v]) => { const d = distanza([0, ...r.mid], [0, v[1], v[2]]); return !m || d < m[1] ? [v[0], d] : m; }, null);
+    verdi.innerHTML = r.righe.filter(x => x.st === 'open' && x.f < 30 && x.n !== '30 m').map(x => `<span class="cg-chip open" title="${x.f} MHz">${x.n} aperta</span>`).join('');
+    const ore = prossime24(r, dati), conPrev = ore.slice(1).some(o => o.st);
     res.innerHTML = `
       <p style="margin:6px 0"><b>${esc(a[1])} (${a[0]}) ↔ ${esc(b[1])} (${b[0]})</b>: circa <b>${Math.round(r.D0)} km</b> – ${tipo}.</p>
       <div class="cg-big">${big}</div>
-      <div class="cg-chips">${r.righe.map(x => `<span class="cg-chip ${x.st}" title="${x.f} MHz">${x.n} ${TXT[x.st]}${x.n === '30 m' ? ' (no SSB)' : ''}</span>`).join('')}</div>
-      <p class="cg-small" style="margin:6px 0">MUF stimata per ${Math.round(r.D)} km: <b>${f1(r.muf)} MHz</b> · FOT (85%): <b>${f1(r.fot)} MHz</b> · foF2 al punto medio: ${f1(r.s.fof2)} MHz${r.s.ftes ? ` · ftEs: ${f1(r.s.ftes)} MHz` : ''}${r.day ? ' · di giorno: 160 m e, oltre 500 km, 80 m penalizzati dallo strato D' : ''}.</p>
-      <p class="cg-small" style="margin:6px 0">Ionosfera stimata nel punto a metà strada pesando le ionosonde: ${pesi}. Dati delle ${hhmm(r.s.t)} (ora italiana). Calcolo tra i capoluoghi di provincia: è un’indicazione, la verifica vera resta l’ascolto in banda.</p>`;
+      <div class="cg-sec"><h3>1. Il collegamento</h3>
+        <div class="cg-two"><div class="cg-mapbox">${mappaCollegamento(a, b, r.mid, vicina)}</div>
+        <div class="cg-col"><p style="margin:0 0 6px">Distanza <b>${Math.round(r.D0)} km</b> · punto medio vicino a <b>${esc(vicinoA[0])}</b>${vicina ? ` · ionosonda <b>${esc(vicina)}</b> a <b>${Math.round(dIono)} km</b> → ${aff}` : ''}</p>
+        <div class="cg-spot"><p class="cg-small">Lettura degli spot del DX cluster…</p></div></div></div>
+        <p class="cg-small" style="margin:8px 0 0">MUF stimata per ${Math.round(r.D)} km: <b>${f1(r.muf)} MHz</b> · FOT (85%): <b>${f1(r.fot)} MHz</b> · foF2 al punto medio: ${f1(r.s.fof2)} MHz${r.s.ftes ? ` · ftEs: ${f1(r.s.ftes)} MHz` : ''}${r.day ? ' · di giorno: 160 m e, oltre 500 km, 80 m penalizzati dallo strato D' : ''}.<br>
+        Ionosfera stimata nel punto a metà strada pesando le ionosonde: ${pesi}. Dati delle ${hhmm(r.s.t)} (ora italiana). Oltre 300 km dalla ionosonda la stima è “indicativa”, oltre 600 km “incerta”. Calcolo tra i capoluoghi di provincia: è un’indicazione, la verifica vera resta l’ascolto in banda.</p></div>
+      <div class="cg-sec"><h3>2. Le prossime 24 ore per ${esc(a[1])}–${esc(b[1])}</h3>
+        <div style="overflow-x:auto">${striscia(ore)}</div>
+        <div class="cg-leg"><span><i style="background:var(--open,#1f9d55)"></i>aperta</span><span><i style="background:var(--marg,#d9a400)"></i>marginale</span><span><i style="background:var(--abs,#e07b39)"></i>assorbita</span><span><i style="background:var(--closed,#c9ced6)"></i>chiusa</span><span>· riquadro = adesso · in alto la banda migliore per ogni ora (ora italiana)</span></div>
+        <p class="cg-small" style="margin:6px 0 0">${conPrev ? 'In sintesi: ' + sintesi(ore) + ' I 30 m non compaiono: lì la fonia non è ammessa.' : 'Previsione delle prossime ore non disponibile (la pagina non ha ancora caricato i dati delle ionosonde): è mostrata solo la colonna di adesso.'}</p></div>
+      <div class="cg-sec"><h3>3. Zona di silenzio e copertura da ${esc(a[1])}</h3>
+        <div class="cg-zb">${ORDINE.map(n => `<button type="button" data-b="${n}">${n}</button>`).join('')}</div>
+        <div class="cg-sl">ora<input type="range" min="0" max="${conPrev ? 23 : 0}" value="0" aria-label="Ora"><span class="cg-slh"></span></div>
+        <div class="cg-two"><div class="cg-mapbox cg-zmap"></div><div class="cg-col cg-ztxt"></div></div></div>
+      <p class="cg-small" style="margin:10px 0 0">Previsione calcolata solo dalle misure delle ionosonde INGV (foF2, M(3000)F2, foE); non tiene conto di potenza, antenna e rumore. Gli spot del cluster e WSPR sono il controllo reale.</p>`;
+    // zona di silenzio: banda e ora scelte dall'utente
+    const zb = res.querySelector('.cg-zb'), sl = res.querySelector('.cg-sl input'), slh = res.querySelector('.cg-slh');
+    let zBanda = r.best ? r.best.n : '40 m';
+    if (!ORDINE.includes(zBanda)) zBanda = '40 m';
+    const disegna = () => {
+      const k = +sl.value, o = ore[k], f = BANDE.find(x => x[0] === zBanda)[1];
+      zb.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.b === zBanda));
+      slh.textContent = k ? hhmm(o.T - H / 2) : 'adesso';
+      const s = ionoAlle(o.T, [a[2], a[3]], dati, prevStazioni());
+      const zbox = res.querySelector('.cg-zmap'), ztxt = res.querySelector('.cg-ztxt');
+      if (!s) { zbox.innerHTML = mappaZona(a, b, { chiusa: true }); ztxt.innerHTML = '<p class="cg-small">Dati non disponibili per quest’ora.</p>'; return; }
+      const z = zona(f, s), stB = o.st ? o.st[zBanda] : null;
+      zbox.innerHTML = mappaZona(a, b, z);
+      const quando = `Sui <b>${zBanda}</b> ${k ? 'alle <b>' + hhmm(o.T - H / 2) + '</b>' : '<b>adesso</b>'}:`;
+      const corr = b[0] === a[0] ? '' : `<p style="margin:8px 0 0">${esc(b[1])} (${Math.round(r.D0)} km): ${stB ? `banda <b>${TXT[stB]}</b>` : 'nessun dato'}${stB === 'closed' && !z.chiusa && r.D0 < z.salto ? ' – è dentro la zona di silenzio' : ''}.</p>`;
+      ztxt.innerHTML = z.chiusa
+        ? `<p style="margin:0">${quando}</p><p style="margin:8px 0 0">${z.assorbita ? 'la banda è <b>assorbita</b> dallo strato D (di giorno).' : 'la banda è <b>chiusa</b> a tutte le distanze: la frequenza supera la MUF anche per i collegamenti lunghi.'}</p>${corr}`
+        : `<p style="margin:0">${quando}</p><p style="margin:8px 0 0">${z.salto > 0 ? `<b>Zona di silenzio</b> (tratteggio) fino a circa <b>${Math.round(z.salto / 10) * 10} km</b>: dentro l’anello non si arriva via ionosfera.` : '<b>Nessuna zona di silenzio</b>: si arriva anche vicino (NVIS).'}</p><p style="margin:8px 0 0"><b>Coperto con un salto</b> (verde) ${z.salto > 0 ? 'da ' + Math.round(z.salto / 10) * 10 + ' ' : ''}fino a circa <b>${Math.round(z.fuori / 100) * 100} km</b>${z.assorbita ? ' (di giorno l’assorbimento limita la portata)' : ''}.</p>${corr}<p class="cg-small" style="margin:8px 0 0">Spostando il cursore dell’ora l’anello si allarga o si stringe. Stima con la ionosfera sopra ${esc(a[1])}.</p>`;
+    };
+    zb.addEventListener('click', e => { const t = e.target.closest('button'); if (t) { zBanda = t.dataset.b; disegna(); } });
+    sl.addEventListener('input', disegna);
+    disegna();
     const bandaCl = r.best ? r.best.n : r.marg.length ? r.marg[r.marg.length - 1].n : null;
-    const box = document.createElement('div'); box.innerHTML = '<p class="cg-small">Lettura degli spot del DX cluster…</p>';
-    res.insertBefore(box, res.querySelector('.cg-chips').nextSibling);
-    box.innerHTML = boxCluster(await leggiCluster(), bandaCl, AREA_DI[a[0]], AREA_DI[b[0]]);
-    const bw = document.createElement('div'); box.after(bw); bw.innerHTML = boxWspr(await leggiWspr(), bandaCl, r.mid, r.D0);
+    const spot = res.querySelector('.cg-spot');
+    const cl = boxCluster(await leggiCluster(), bandaCl, AREA_DI[a[0]], AREA_DI[b[0]]);
+    spot.innerHTML = cl + boxWspr(await leggiWspr(), bandaCl, r.mid, r.D0);
   });
 }
 document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', mount) : mount();

@@ -640,6 +640,8 @@ async function renderItalia(cur) {
   // ultimi valori di ogni ionosonda, condivisi con il calcolatore QSO (collegamento.js)
   window.IONO_ULTIMI = Object.fromEntries(rows.map(([k, recs]) => [k, [...recs].reverse().find(r => r.fof2) || null]));
   window.IONO_ULTIMI_T = Date.now();
+  // previsione delle prossime 24 ore di ogni ionosonda, calcolata solo quando il calcolatore QSO la chiede
+  window.IONO_PREV = () => Object.fromEntries(rows.map(([k, recs]) => { try { return [k, recs.length ? forecast(recs, backtest(recs)).pts : []]; } catch (e) { return [k, []]; } }));
   let h = '<table><tr><th class="l">Ionosonda</th><th>Zona</th><th>Ora (IT)</th><th>foF2</th><th>vs mediana</th><th>MUF 1000 km</th><th>MUF 3000 km</th><th>ftEs / foEs</th></tr>';
   for (const [k, recs] of rows) {
     const S = STATIONS[k], last = [...recs].reverse().find(r => r.fof2);
