@@ -20,9 +20,6 @@ jobs:
   aggiorna:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
 
@@ -81,5 +78,25 @@ jobs:
         with:
           path: .
 
+  # Pubblicazione in un job separato, come raccomanda GitHub: il pacchetto della pagina è già
+  # registrato quando questo job parte. Se GitHub non lo trova subito, secondo tentativo dopo 30 s.
+  pubblica:
+    needs: aggiorna
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}
+    steps:
       - id: deploy
         uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - name: Attesa prima del secondo tentativo
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 30
+
+      - id: deploy2
+        if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@v5
+
