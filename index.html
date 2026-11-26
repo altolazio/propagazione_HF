@@ -34,7 +34,7 @@
   .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
   select,button{font:inherit;padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
   button{cursor:pointer}
-  .status{font-size:13px;color:var(--mute)}
+  .status{font-size:13px;color:var(--mute);line-height:1.3}
   .warn{background:#fff3cd;color:#6b5000;border:1px solid #f1d27a;padding:8px 12px;border-radius:8px;margin:8px 0;font-size:14px}
   @media all{.warn{background:#3a3010;color:#f3dd95;border-color:#6b5a1d}}
   .grid{display:grid;gap:12px}
@@ -93,12 +93,12 @@
 
   <div class="bar">
     <label>Ionosonda <select id="station">
-      <option value="rm041">Roma – AIS-INGV (41.8N 12.5E)</option>
-      <option value="ro041">Roma – Digisonde DPS-4D</option>
-      <option value="sp044">La Spezia (44.1N 9.8E)</option>
-      <option value="gm037d">Gibilmanna – PA, Digisonde (37.9N 14.0E)</option>
+      <option value="rm041" title="41.8N 12.5E">Roma (AIS-INGV)</option>
+      <option value="ro041" title="Digisonde DPS-4D, 41.8N 12.5E">Roma (Digisonde)</option>
+      <option value="sp044" title="AIS-INGV, 44.1N 9.8E">La Spezia</option>
+      <option value="gm037d" title="Digisonde, 37.9N 14.0E">Gibilmanna (PA)</option>
     </select></label>
-    <button id="reload">Aggiorna ora</button>
+    <button id="reload" title="Aggiorna ora i dati">Aggiorna</button>
     <span class="status" id="status">Caricamento…</span>
   </div>
   <div id="alerts"></div>
@@ -704,7 +704,7 @@ async function update(full) {
     renderItalia(st).catch(() => {});
     if (CFG.staticData && dataUpdated) {
       const fresco = Date.now() - dataUpdated < 3600e3;
-      $('status').innerHTML = `<b style="color:${fresco ? 'var(--open)' : '#fff'}" title="${fresco ? 'Dati scaricati nell’ultima ora' : 'Dati scaricati più di un’ora fa'}">Dati scaricati dall'INGV alle ${hhmm(dataUpdated)}</b> · la pagina ricontrolla ogni ${CFG.refreshMin} min`;
+      $('status').innerHTML = `<b style="color:${fresco ? 'var(--open)' : '#fff'}" title="${fresco ? 'Dati scaricati nell’ultima ora' : 'Dati scaricati più di un’ora fa'}">Dati scaricati dall'INGV alle ${hhmm(dataUpdated)}</b><br>la pagina ricontrolla ogni ${CFG.refreshMin} min`;
     } else $('status').textContent = `Aggiornato alle ${hhmm(Date.now())} · prossimo aggiornamento tra ${CFG.refreshMin} min`;
   } catch (e) {
     $('status').textContent = 'Errore nel caricamento dei dati INGV (' + e.message + '). Nuovo tentativo tra poco.';

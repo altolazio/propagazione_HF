@@ -377,6 +377,153 @@ function zona(f, s) {
   return { salto, fuori: lim, assorbita: day && f <= 4 };
 }
 
+
+/* ---------- PREVISIONE MODALITÀ CONTEST (dal 26/11/2026) ----------
+   Dalla provincia dell'utente: quali capoluoghi raggiunge e su quale banda, adesso e nelle prossime 24 ore.
+   Tutto calcolato nel browser con gli stessi dati e formule del calcolatore (nessun carico sul motore).
+   Bande dei contest (niente WARC né 60 m); in CW le bande "marginali" contano come aperte. */
+const CB = [['160 m', 1.85, '#8a4fd8'], ['80 m', 3.65, '#e07b39'], ['40 m', 7.1, '#1f9d55'], ['20 m', 14.15, '#2f6fdc'], ['15 m', 21.2, '#d23d5b'], ['10 m', 28.5, '#d9a400']];
+const CBC = Object.fromEntries(CB.map(b => [b[0], b[2]]));
+function contestCalcola(me, dati) {
+  const prev = prevStazioni(), t0 = Math.floor(Date.now() / H) * H, altre = Object.entries(PROV).filter(([k]) => k !== me[0]);
+  const geo = altre.map(([k, v]) => { const a = [0, me[2], me[3]], b = [0, v[1], v[2]], D0 = distanza(a, b); return { k, nome: v[0], lat: v[1], lon: v[2], D0, D: Math.max(D0, 30), mid: puntoMedio(a, b) }; });
+  const ore = [];
+  for (let h = 0; h < 24; h++) {
+    const T = h ? t0 + h * H + H / 2 : Date.now(), st = {};
+    for (const g of geo) {
+      const s = ionoAlle(T, g.mid, dati, prev); if (!s) { st[g.k] = null; continue; }
+      const muf = mufAt(g.D, s); st[g.k] = CB.map(([, f]) => stato(f, g.D, s, muf, null));
+    }
+    ore.push({ T, st });
+  }
+  return { geo, ore, n: altre.length };
+}
+const apertaIn = (x, cw) => x === 'open' || (cw && x === 'marg');
+function contestConti(C, h, cw) {   // province aperte per banda all'ora h
+  return CB.map((b, i) => C.geo.filter(g => { const s = C.ore[h].st[g.k]; return s && apertaIn(s[i], cw); }).length);
+}
+function contestMappa(me, C, h, cw, banda) {
+  let s = `<svg class="cg-map" viewBox="0 0 ${MW} ${MH}" role="img" aria-label="Province raggiungibili">${terra()}`;
+  for (const g of C.geo) {
+    const st = C.ore[h].st[g.k], [x, y] = P(g.lat, g.lon); let el;
+    if (banda) {
+      const i = CB.findIndex(b => b[0] === banda), v = st ? st[i] : null;
+      const col = apertaIn(v, cw) ? 'var(--open,#1f9d55)' : v === 'marg' ? 'var(--marg,#d9a400)' : v === 'abs' ? 'var(--abs,#e07b39)' : 'var(--closed,#c9ced6)';
+      el = `<circle cx="${x}" cy="${y}" r="${apertaIn(v, cw) ? 4.2 : 3.2}" fill="${col}" stroke="var(--card,#fff)" stroke-width=".7"/>`;
+      g.tip = `${banda}: ${v ? (apertaIn(v, cw) ? 'aperta' : TXT[v]) : 'nessun dato'}`;
+    } else {
+      const ap = st ? CB.filter((b, i) => apertaIn(st[i], cw)).map(b => b[0]) : [], mg = st ? CB.filter((b, i) => st[i] === 'marg').map(b => b[0]) : [];
+      const m = ap[ap.length - 1], mm = mg[mg.length - 1];
+      el = m ? `<circle cx="${x}" cy="${y}" r="4.2" fill="${CBC[m]}" stroke="var(--card,#fff)" stroke-width=".7"/>`
+        : mm ? `<circle cx="${x}" cy="${y}" r="3.4" fill="none" stroke="${CBC[mm]}" stroke-width="1.6"/>` : `<circle cx="${x}" cy="${y}" r="3" fill="var(--closed,#c9ced6)"/>`;
+      g.tip = m ? `banda migliore: ${m}${ap.length > 1 ? ' (aperte: ' + ap.join(', ') + ')' : ''}` : mm ? `solo marginale: ${mm}` : 'non raggiungibile';
+    }
+    s += `<g class="cg-pv" data-k="${g.k}" style="cursor:pointer">${el}<circle cx="${x}" cy="${y}" r="7" fill="transparent"/><title>${esc(g.nome)} (${g.k}), ${Math.round(g.D0)} km – ${g.tip}. Clic: apri nel Calcolatore QSO</title></g>`;
+  }
+  const [xa, ya] = P(me[2], me[3]);
+  return s + `<circle cx="${xa}" cy="${ya}" r="6.5" fill="#fff" stroke="var(--foF2,#2f6fdc)" stroke-width="2.5"/><text x="${+xa + 9}" y="${+ya + 4}" font-size="11" font-weight="700" fill="var(--ink,#1b1f24)">${me[0]} (tu)</text></svg>`;
+}
+function contestGriglia(C, cw) {
+  const cw_ = 19, rh = 17, lx = 42, W = lx + 24 * cw_, Hh = 24 + rh * CB.length + 16;
+  let s = `<svg class="cg-strip" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Province raggiungibili nelle prossime 24 ore"><text x="0" y="14" font-size="9" fill="var(--mute,#5f6b78)">migliore</text>`;
+  C.ore.forEach((o, h) => {
+    const n = contestConti(C, h, cw), x = lx + h * cw_, i = n.indexOf(Math.max(...n)), m = n[i] ? CB[i][0] : null;
+    s += `<text x="${x + cw_ / 2}" y="14" text-anchor="middle" font-size="8.5" font-weight="700" fill="${m ? CBC[m] : 'var(--mute,#5f6b78)'}">${m ? m.replace(' m', '') : '–'}</text>`;
+    CB.forEach(([b, , col], j) => {
+      const y = 22 + j * rh;
+      s += `<rect x="${x + 1}" y="${y + 1}" width="${cw_ - 2}" height="${rh - 2}" rx="2" fill="${col}" fill-opacity="${(0.08 + 0.85 * n[j] / C.n).toFixed(2)}"><title>${hhmm(h ? o.T - H / 2 : o.T)} – ${b}: ${n[j]} province</title></rect>`;
+      if (n[j]) s += `<text x="${x + cw_ / 2}" y="${y + 12}" text-anchor="middle" font-size="7.5" fill="#fff" pointer-events="none">${n[j]}</text>`;
+    });
+    const hh = +new Date(o.T).toLocaleString('it-IT', { hour: '2-digit', hour12: false, timeZone: 'Europe/Rome' });
+    if (h === 0 || hh % 3 === 0) s += `<text x="${x + 1}" y="${22 + CB.length * rh + 12}" font-size="9" fill="var(--mute,#5f6b78)">${h ? String(hh).padStart(2, '0') : 'ora'}</text>`;
+  });
+  CB.forEach(([b], j) => s += `<text x="0" y="${22 + j * rh + 12}" font-size="10" fill="var(--mute,#5f6b78)">${b}</text>`);
+  return s + `<rect x="${lx}" y="20" width="${cw_}" height="${CB.length * rh + 4}" fill="none" stroke="var(--ink,#1b1f24)" stroke-width="1.6" rx="3"/></svg>`;
+}
+function contestSintesi(C, cw) {
+  const best = C.ore.map((o, h) => { const n = contestConti(C, h, cw), i = n.indexOf(Math.max(...n)); return n[i] ? CB[i][0] : null; });
+  const ora = h => +new Date(C.ore[h].T).toLocaleString('it-IT', { hour: '2-digit', hour12: false, timeZone: 'Europe/Rome' });
+  const out = []; let i = 0;
+  while (i < 24) { let j = i; while (j + 1 < 24 && best[j + 1] === best[i]) j++;
+    if (best[i]) out.push(`<b>${best[i]}</b> ${i === 0 ? 'da adesso' : 'dalle ' + ora(i)} ${j === 23 ? 'in poi' : 'alle ' + (ora(j) + 1) % 24}`);
+    i = j + 1; }
+  return out.length ? out.join('; ') + '.' : 'nessuna banda aperta verso le altre province nelle prossime 24 ore.';
+}
+function mountContest(btnCalc, apriCalc) {
+  const bar = document.querySelector('.bar');
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'cg-btn cg-btn2';
+  btn.innerHTML = 'Previsione<br>modalità contest'; btn.title = 'Quali province puoi collegare e su quale banda, adesso e nelle prossime 24 ore'; btn.setAttribute('aria-haspopup', 'dialog');
+  btnCalc.after(btn);
+  const opts = '<option value="">Scegli…</option>' + Object.entries(PROV).sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => `<option value="${k}">${k} – ${esc(v[0])}</option>`).join('');
+  const back = document.createElement('div'); back.className = 'cg-back';
+  const pop = document.createElement('div'); pop.className = 'cg-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-modal', 'true'); pop.setAttribute('aria-labelledby', 'ct-tit');
+  pop.innerHTML = `
+    <button type="button" class="cg-x" aria-label="Chiudi">✕</button>
+    <h2 id="ct-tit">Previsione modalità contest</h2>
+    <p class="cg-small" style="margin:0">Quali province puoi collegare, e su quale banda, adesso e nelle prossime 24 ore. Previsione calcolata dalle misure delle ionosonde INGV, tra capoluoghi di provincia, per le bande dei contest (160, 80, 40, 20, 15 e 10 m). Scegli la tua provincia e il modo di emissione.</p>
+    <form class="cg-row">
+      <label>La tua provincia<select id="ct-a" required>${opts}</select></label>
+      <label>Modo<span class="ct-modo"><button type="button" data-m="ssb" class="on">SSB</button><button type="button" data-m="cw">CW</button></span></label>
+      <button type="submit" class="cg-btn" style="padding:8px 14px">Calcola</button>
+    </form>
+    <div class="cg-res" aria-live="polite"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px"><button type="button" class="cg-close">Chiudi</button></div>`;
+  document.body.appendChild(back); document.body.appendChild(pop);
+  const res = pop.querySelector('.cg-res'), ia = pop.querySelector('#ct-a'), modo = pop.querySelector('.ct-modo');
+  let cw = false, C = null, me = null, h = 0, banda = null;
+  const open = () => { const r = btn.getBoundingClientRect(); pop.style.top = (r.bottom + window.scrollY + 10) + 'px'; back.classList.add('on'); pop.classList.add('on'); ia.focus(); };
+  const close = () => { back.classList.remove('on'); pop.classList.remove('on'); };
+  btn.addEventListener('click', open);
+  back.addEventListener('click', () => { close(); btn.focus(); });
+  pop.querySelector('.cg-x').addEventListener('click', () => { close(); btn.focus(); });
+  pop.querySelector('.cg-close').addEventListener('click', () => { close(); btn.focus(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && pop.classList.contains('on')) { close(); btn.focus(); } });
+  modo.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; cw = b.dataset.m === 'cw'; modo.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); if (C) disegna(); });
+
+  const disegna = () => {
+    const n = contestConti(C, h, cw), n0 = contestConti(C, 0, cw), nCw = contestConti(C, 0, true), max = C.n;
+    const quando = h ? 'alle ' + hhmm(C.ore[h].T - H / 2) : 'adesso', top = n.indexOf(Math.max(...n));
+    const barre = CB.map(([b, , col], i) => `<div class="ct-br"><span class="ct-bl">${b}</span><span class="ct-bb" style="width:${Math.max(2, n0[i] / max * 150)}px;background:${col}"></span><b>${n0[i]}</b></div>`).join('');
+    const ord = CB.map((b, i) => [b[0], n0[i]]).filter(x => x[1]).sort((a, b) => b[1] - a[1]);
+    const testo1 = ord.length ? `Su <b>${ord[0][0]}</b> raggiungi <b>${ord[0][1]}</b> capoluoghi su ${max}${ord[1] ? `, su <b>${ord[1][0]}</b> ${ord[1][1]}` : ''}.` : 'Adesso nessuna banda raggiunge le altre province.';
+    const piuCw = !cw && CB.map((b, i) => [b[0], nCw[i] - n0[i]]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1])[0];
+    const leg = CB.map(([b, , c]) => `<span><i style="background:${c}"></i>${b}</span>`).join('') + '<span><i style="background:none;border:1.6px solid var(--mute,#5f6b78)"></i>solo marginale</span><span><i style="background:var(--closed,#c9ced6)"></i>non raggiungibile</span>';
+    const leg1 = '<span><i style="background:var(--open,#1f9d55)"></i>aperta</span><span><i style="background:var(--marg,#d9a400)"></i>marginale</span><span><i style="background:var(--abs,#e07b39)"></i>assorbita</span><span><i style="background:var(--closed,#c9ced6)"></i>chiusa</span>';
+    res.innerHTML = `
+      <div class="cg-sec"><h3>1. Adesso: province raggiungibili per banda (${cw ? 'CW' : 'SSB'})</h3>
+        <div class="cg-two"><div style="flex:1;min-width:220px">${barre}</div><div class="cg-col cg-small" style="max-width:260px">${testo1}${piuCw ? `<br><br>In <b>CW</b> i ${piuCw[0]} salgono di ${piuCw[1]} province: in telegrafia passano anche i segnali al limite.` : ''}</div></div></div>
+      <div class="cg-sec"><h3>2. Mappa: dove arrivi e con che banda</h3>
+        <div class="cg-zb ct-vista"><button type="button" data-b="" class="${banda ? '' : 'on'}">Banda migliore</button>${CB.map(([b], i) => `<button type="button" data-b="${b}" class="${banda === b ? 'on' : ''}${i === top && n[i] ? ' top' : ''}"${i === top && n[i] ? ` title="Banda con più province ${quando}: ${n[i]}"` : ''}>${b}</button>`).join('')}${n[top] ? `<span class="cg-small ct-top">in verde la banda con più province ${quando} (${n[top]})</span>` : ''}</div>
+        <div class="cg-sl">ora<button type="button" class="cg-fr" data-d="-1" aria-label="Ora precedente">◀</button><input type="range" min="0" max="23" value="${h}" aria-label="Ora"><button type="button" class="cg-fr" data-d="1" aria-label="Ora successiva">▶</button><span class="cg-slh">${quando}</span></div>
+        <div class="cg-two"><div class="cg-mapbox">${contestMappa(me, C, h, cw, banda)}</div>
+        <div class="cg-col">${banda ? `Sui <b>${banda}</b> ${quando}: in verde le province raggiungibili (<b>${n[CB.findIndex(b => b[0] === banda)]}</b>), in giallo quelle al limite, in grigio quelle non raggiungibili (zona di silenzio o banda chiusa).` : `Ogni pallino è un capoluogo, colorato con la <b>banda più alta su cui lo raggiungi</b> (${quando}).`}<br><br>Passando sopra un pallino compaiono provincia, distanza e stato; <b>cliccandolo</b> si apre il Calcolatore QSO per quel collegamento.
+        <div class="cg-leg">${banda ? leg1 : leg}</div></div></div></div>
+      <div class="cg-sec"><h3>3. Il tuo contest: previsione delle prossime 24 h</h3>
+        <div style="overflow-x:auto">${contestGriglia(C, cw)}</div>
+        <p class="cg-small" style="margin:6px 0 0">Numero di capoluoghi raggiungibili per ogni ora e banda (colore più intenso = più province); in alto la banda con più province. In sintesi (${cw ? 'CW' : 'SSB'}): ${contestSintesi(C, cw)}</p></div>
+      <ul class="cg-small ct-note">
+        <li><b>Previsione</b> calcolata solo dalle misure delle ionosonde INGV (foF2, M(3000)F2, foE) e dalla previsione a 24 ore della pagina; non tiene conto di potenza, antenna, rumore e affollamento della banda.</li>
+        <li><b>Tra capoluoghi</b>: lontano dalle ionosonde di Roma, La Spezia e Gibilmanna (Sardegna, estremo Nord-Est e Sud) la stima è meno precisa.</li>
+        <li><b>Bande WARC</b> (30, 17, 12 m) escluse: nei contest non si usano; esclusi anche i 60 m.</li>
+        <li><b>CW</b>: approssimazione; in telegrafia contano come aperte anche le bande marginali (la CW passa con segnali 20–25 dB più deboli della SSB).</li>
+        <li><b>Oltre 24 ore</b> non c’è previsione: per un contest di 48 ore riaprire la finestra il secondo giorno.</li>
+        <li>Durante una <b>tempesta geomagnetica</b> (avviso in cima alla pagina) le ore future sono meno affidabili.</li></ul>`;
+    res.querySelector('.ct-vista').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { banda = b.dataset.b || null; disegna(); } });
+    res.querySelector('.cg-sl input').addEventListener('input', e => { h = +e.target.value; disegna(); res.querySelector('.cg-sl input').focus(); });
+    res.querySelectorAll('.cg-sl .cg-fr').forEach(b => b.addEventListener('click', () => { h = Math.min(23, Math.max(0, h + +b.dataset.d)); disegna(); res.querySelector(`.cg-sl .cg-fr[data-d="${b.dataset.d}"]`).focus(); }));
+    res.querySelectorAll('.cg-pv').forEach(g => g.addEventListener('click', () => { close(); apriCalc(me[0], g.dataset.k, () => open()); }));
+  };
+  pop.querySelector('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const a = trova(ia.value);
+    if (!a) { res.innerHTML = '<p class="cg-err">Scegliere la propria provincia.</p>'; return; }
+    res.innerHTML = '<p class="cg-small">Calcolo per tutti i capoluoghi…</p>';
+    const dati = await datiAttuali();
+    if (!Object.values(dati).some(Boolean)) { res.innerHTML = '<p class="cg-err">Nessun dato recente disponibile dalle ionosonde INGV (ultime 3 ore). Riprovare più tardi.</p>'; return; }
+    me = a; h = 0; C = contestCalcola(a, dati); disegna();
+  });
+}
+
 /* ---------- interfaccia ---------- */
 const CSS = `
 .cg-btn{font:inherit;padding:5px 11px;border-radius:7px;border:1px solid var(--foF2,#2f6fdc);background:var(--foF2,#2f6fdc);color:#fff;cursor:pointer;font-weight:600}
@@ -423,7 +570,21 @@ const CSS = `
 .cg-zb button.on{background:var(--foF2,#2f6fdc);border-color:var(--foF2,#2f6fdc);color:#fff}
 .cg-sl{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mute,#5f6b78);margin:6px 0 8px}
 .cg-sl input{flex:1}
+.cg-fr{font:inherit;font-size:13px;line-height:1;padding:4px 9px;border-radius:6px;border:1px solid var(--line,#dde2e8);background:var(--bg,#f6f7f9);color:var(--ink,#1b1f24);cursor:pointer}
+.cg-fr:hover{border-color:var(--foF2,#2f6fdc)}
+.cg-slh{min-width:52px;text-align:right}
 .cg-ok{color:var(--open,#1f9d55);font-weight:700}
+.cg-btn2{background:#c2570c;border-color:#c2570c;line-height:1.1;font-size:13px;padding:3px 10px;text-align:center}
+.ct-modo{display:inline-flex;border:1px solid var(--line,#dde2e8);border-radius:8px;overflow:hidden}
+.ct-modo button{font:inherit;font-weight:700;font-size:14px;padding:6px 14px;border:0;background:var(--bg,#f6f7f9);color:var(--mute,#5f6b78);cursor:pointer}
+.ct-modo button.on{background:var(--foF2,#2f6fdc);color:#fff}
+.ct-br{display:flex;align-items:center;gap:8px;font-size:13px;margin:3px 0}
+.ct-bl{width:44px;color:var(--mute,#5f6b78)}
+.ct-bb{height:12px;border-radius:3px;display:inline-block}
+.ct-note{margin:10px 0 0;padding-left:18px}.ct-note li{margin:2px 0}
+.cg-zb button.top{background:var(--open,#1f9d55);border-color:var(--open,#1f9d55);color:#fff}
+.cg-zb button.top.on{background:var(--foF2,#2f6fdc);border-color:var(--open,#1f9d55);box-shadow:0 0 0 2px var(--open,#1f9d55)}
+.ct-top{align-self:center;margin-left:4px}
 `;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 const f1 = v => v == null ? '–' : v.toFixed(1).replace('.', ',');
@@ -470,7 +631,8 @@ function mount() {
     pop.style.top = (r.bottom + window.scrollY + 10) + 'px';
     back.classList.add('on'); pop.classList.add('on'); ia.focus();
   };
-  const close = () => { back.classList.remove('on'); pop.classList.remove('on'); btn.focus(); };
+  let dopo = null;   // se aperto dalla finestra contest: alla chiusura si torna lì
+  const close = () => { back.classList.remove('on'); pop.classList.remove('on'); if (dopo) { const f = dopo; dopo = null; f(); } else btn.focus(); };
   btn.addEventListener('click', open);
   back.addEventListener('click', close);
   pop.querySelector('.cg-x').addEventListener('click', close);
@@ -518,7 +680,7 @@ function mount() {
         <p class="cg-small" style="margin:6px 0 0">${conPrev ? 'In sintesi: ' + sintesi(ore) + ' I 30 m non compaiono: lì la fonia non è ammessa.' : 'Previsione delle prossime ore non disponibile (la pagina non ha ancora caricato i dati delle ionosonde): è mostrata solo la colonna di adesso.'}</p></div>
       <div class="cg-sec"><h3>3. Zona di silenzio e copertura da ${esc(a[1])}</h3>
         <div class="cg-zb">${ORDINE.map(n => `<button type="button" data-b="${n}">${n}</button>`).join('')}</div>
-        <div class="cg-sl">ora<input type="range" min="0" max="${conPrev ? 23 : 0}" value="0" aria-label="Ora"><span class="cg-slh"></span></div>
+        <div class="cg-sl">ora<button type="button" class="cg-fr" data-d="-1" aria-label="Ora precedente">◀</button><input type="range" min="0" max="${conPrev ? 23 : 0}" value="0" aria-label="Ora"><button type="button" class="cg-fr" data-d="1" aria-label="Ora successiva">▶</button><span class="cg-slh"></span></div>
         <div class="cg-two"><div class="cg-mapbox cg-zmap"></div><div class="cg-col cg-ztxt"></div></div></div>
       <p class="cg-small" style="margin:10px 0 0">Previsione calcolata solo dalle misure delle ionosonde INGV (foF2, M(3000)F2, foE); non tiene conto di potenza, antenna e rumore. Gli spot del cluster e WSPR sono il controllo reale.</p>`;
     // zona di silenzio: banda e ora scelte dall'utente
@@ -542,12 +704,14 @@ function mount() {
     };
     zb.addEventListener('click', e => { const t = e.target.closest('button'); if (t) { zBanda = t.dataset.b; disegna(); } });
     sl.addEventListener('input', disegna);
+    res.querySelectorAll('.cg-sl .cg-fr').forEach(b => b.addEventListener('click', () => { sl.value = Math.min(+sl.max, Math.max(0, +sl.value + +b.dataset.d)); disegna(); }));
     disegna();
     const bandaCl = r.best ? r.best.n : r.marg.length ? r.marg[r.marg.length - 1].n : null;
     const spot = res.querySelector('.cg-spot');
     const cl = boxCluster(await leggiCluster(), bandaCl, AREA_DI[a[0]], AREA_DI[b[0]]);
     spot.innerHTML = cl + boxWspr(await leggiWspr(), bandaCl, r.mid, r.D0);
   });
+  mountContest(btn, (sa, sb, poi) => { open(); ia.value = sa; ib.value = sb; dopo = poi || null; pop.querySelector('form').requestSubmit(); });
 }
 document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', mount) : mount();
 })();
