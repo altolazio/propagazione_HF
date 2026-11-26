@@ -505,7 +505,7 @@ function mountContest(btnCalc, apriCalc) {
         <li><b>Previsione</b> calcolata solo dalle misure delle ionosonde INGV (foF2, M(3000)F2, foE) e dalla previsione a 24 ore della pagina; non tiene conto di potenza, antenna, rumore e affollamento della banda.</li>
         <li><b>Tra capoluoghi</b>: lontano dalle ionosonde di Roma, La Spezia e Gibilmanna (Sardegna, estremo Nord-Est e Sud) la stima è meno precisa.</li>
         <li><b>Bande WARC</b> (30, 17, 12 m) escluse: nei contest non si usano; esclusi anche i 60 m.</li>
-        <li><b>CW</b>: approssimazione; in telegrafia contano come aperte anche le bande marginali (la CW passa con segnali 20–25 dB più deboli della SSB).</li>
+        <li><b>CW</b>: approssimazione; in telegrafia contano come aperte anche le bande marginali (il CW passa con segnali 20–25 dB più deboli della SSB).</li>
         <li><b>Oltre 24 ore</b> non c’è previsione: per un contest di 48 ore riaprire la finestra il secondo giorno.</li>
         <li>Durante una <b>tempesta geomagnetica</b> (avviso in cima alla pagina) le ore future sono meno affidabili.</li></ul>`;
     res.querySelector('.ct-vista').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { banda = b.dataset.b || null; disegna(); } });
